@@ -1,0 +1,82 @@
+name: lab-media
+
+x-arr: &arr
+  restart: "no"
+  environment: &arr-env
+    PUID: "1100"
+    PGID: "1100"
+    TZ: America/Sao_Paulo
+    UMASK: "027"
+  security_opt: [no-new-privileges:true]
+  networks: [media]
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "2"}
+
+services:
+  sonarr:
+    <<: *arr
+    image: ${SONARR_IMAGE:?}
+    mem_limit: 768m
+    cpus: 0.75
+    ports: ["192.168.250.10:8989:8989"]
+    volumes:
+      - ./appdata/sonarr:/config
+      - /srv/downloads/aprovados:/data/aprovados:ro
+      - /srv/downloads/biblioteca/series:/data/biblioteca/series
+
+  radarr:
+    <<: *arr
+    image: ${RADARR_IMAGE:?}
+    mem_limit: 768m
+    cpus: 0.75
+    ports: ["192.168.250.10:7878:7878"]
+    volumes:
+      - ./appdata/radarr:/config
+      - /srv/downloads/aprovados:/data/aprovados:ro
+      - /srv/downloads/biblioteca/filmes:/data/biblioteca/filmes
+
+  prowlarr:
+    <<: *arr
+    image: ${PROWLARR_IMAGE:?}
+    mem_limit: 512m
+    cpus: 0.5
+    ports: ["192.168.250.10:9696:9696"]
+    volumes: ["./appdata/prowlarr:/config"]
+
+  bazarr:
+    <<: *arr
+    image: ${BAZARR_IMAGE:?}
+    mem_limit: 512m
+    cpus: 0.5
+    ports: ["192.168.250.10:6767:6767"]
+    volumes:
+      - ./appdata/bazarr:/config
+      - /srv/downloads/biblioteca/series:/data/biblioteca/series
+      - /srv/downloads/biblioteca/filmes:/data/biblioteca/filmes
+
+  seerr:
+    image: ${SEERR_IMAGE:?}
+    init: true
+    restart: "no"
+    user: "1000:1000"
+    environment:
+      TZ: America/Sao_Paulo
+      PORT: "5055"
+      LOG_LEVEL: info
+      API_KEY: ${SEERR_API_KEY:?}
+    mem_limit: 1g
+    cpus: 0.75
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    ports: ["192.168.250.10:5055:5055"]
+    volumes: ["./appdata/seerr:/app/config"]
+    networks: [media]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "2"}
+
+networks:
+  media:
+    ipam:
+      config: [{subnet: 172.30.40.0/24}]

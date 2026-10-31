@@ -1,0 +1,13 @@
+[Unit]
+Description=Compatibilidade do NAT da VM de downloads com Docker
+Requires=lab-downloads-firewall.service
+After=lab-downloads-firewall.service docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/etc/nftables/lab-downloads-docker.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=docker.service

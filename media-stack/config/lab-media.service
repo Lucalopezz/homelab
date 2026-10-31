@@ -1,0 +1,18 @@
+[Unit]
+Description=Busca e organização de mídia dentro da VM
+Requires=docker.service
+After=docker.service network-online.target
+RequiresMountsFor=/srv/downloads
+AssertPathIsMountPoint=/srv/downloads
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/media-stack
+ExecStart=/usr/bin/docker compose up -d --no-build
+ExecStop=/usr/bin/docker compose stop
+TimeoutStartSec=300
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target

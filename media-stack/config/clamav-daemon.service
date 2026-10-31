@@ -1,0 +1,26 @@
+[Unit]
+Description=ClamAV LTS oficial para triagem da VM
+After=local-fs.target
+ConditionPathExistsGlob=/var/lib/clamav/daily.c[lv]d
+
+[Service]
+Type=simple
+User=clamav
+Group=clamav
+RuntimeDirectory=clamav
+RuntimeDirectoryMode=0755
+Environment=LD_LIBRARY_PATH=/opt/clamav-release/current/usr/local/lib64:/opt/clamav-release/current/usr/local/lib
+ExecStart=/opt/clamav-release/current/usr/local/sbin/clamd --foreground=true --config-file=/etc/clamav/clamd.conf
+ExecReload=/bin/kill -USR2 $MAINPID
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=420
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+IPAddressDeny=any
+MemoryMax=3G
+CPUQuota=100%
+
+[Install]
+WantedBy=multi-user.target

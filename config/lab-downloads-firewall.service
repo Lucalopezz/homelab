@@ -1,0 +1,12 @@
+[Unit]
+Description=Isolamento de rede da VM de downloads do lab
+After=firewalld.service
+Before=virtnetworkd.service virtqemud.service libvirtd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/nft -f /etc/nftables/lab-downloads.nft
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

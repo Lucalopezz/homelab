@@ -1,0 +1,15 @@
+Host lab-downloads-admin
+    HostName 192.168.250.10
+    User labadmin
+    IdentityFile /mnt/dados/lab/secrets/admin_ed25519
+    IdentitiesOnly yes
+    UserKnownHostsFile /mnt/dados/lab/state/known_hosts
+    StrictHostKeyChecking accept-new
+
+Host lab-downloads-coleta
+    HostName 192.168.250.10
+    User coleta
+    IdentityFile /mnt/dados/lab/secrets/coleta_ed25519
+    IdentitiesOnly yes
+    UserKnownHostsFile /mnt/dados/lab/state/known_hosts
+    StrictHostKeyChecking accept-new

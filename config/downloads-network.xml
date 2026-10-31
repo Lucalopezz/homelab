@@ -1,0 +1,12 @@
+<network>
+  <name>lab-downloads</name>
+  <forward mode='nat'/>
+  <bridge name='virbr-dl' stp='on' delay='0'/>
+  <port isolated='yes'/>
+  <ip address='192.168.250.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.250.100' end='192.168.250.150'/>
+      <host mac='52:54:00:dd:00:10' name='lab-downloads' ip='192.168.250.10'/>
+    </dhcp>
+  </ip>
+</network>

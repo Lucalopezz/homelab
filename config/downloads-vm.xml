@@ -1,0 +1,46 @@
+<domain type='kvm'>
+  <name>lab-downloads</name>
+  <description>Debian e qBittorrent; discos exclusivamente em /mnt/dados/lab</description>
+  <memory unit='MiB'>6144</memory>
+  <vcpu placement='static'>2</vcpu>
+  <os>
+    <type arch='x86_64' machine='pc-q35-10.2'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <features><acpi/><apic/></features>
+  <cpu mode='host-passthrough' check='none'/>
+  <clock offset='utc'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' cache='none' discard='unmap'/>
+      <source file='/mnt/dados/lab/disks/system.qcow2'/>
+      <target dev='vda' bus='virtio'/>
+      <serial>lab-system</serial>
+    </disk>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' cache='none' discard='unmap'/>
+      <source file='/mnt/dados/lab/disks/downloads.qcow2'/>
+      <target dev='vdb' bus='virtio'/>
+      <serial>lab-downloads</serial>
+    </disk>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='raw'/>
+      <source file='/mnt/dados/lab/disks/seed.iso'/>
+      <target dev='vdc' bus='virtio'/>
+      <readonly/>
+    </disk>
+    <interface type='network'>
+      <mac address='52:54:00:dd:00:10'/>
+      <source network='lab-downloads'/>
+      <model type='virtio'/>
+    </interface>
+    <serial type='pty'><target port='0'/></serial>
+    <console type='pty'><target type='serial' port='0'/></console>
+    <memballoon model='virtio'/>
+    <rng model='virtio'><backend model='random'>/dev/urandom</backend></rng>
+  </devices>
+</domain>

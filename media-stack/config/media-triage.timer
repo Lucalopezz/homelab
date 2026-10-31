@@ -1,0 +1,10 @@
+[Unit]
+Description=Conferir downloads terminados para triagem
+
+[Timer]
+OnBootSec=90
+OnUnitInactiveSec=60
+Unit=media-triage.service
+
+[Install]
+WantedBy=timers.target

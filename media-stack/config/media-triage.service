@@ -1,0 +1,27 @@
+[Unit]
+Description=Triagem de downloads antes de liberar coleta e importação
+After=lab-media.service clamav-daemon.service
+RequiresMountsFor=/srv/downloads
+AssertPathIsMountPoint=/srv/downloads
+
+[Service]
+Type=oneshot
+User=triagem
+Group=triagem
+SupplementaryGroups=torrent midia clamav
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 /opt/media-stack/triage/triage.py
+UMask=0027
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/srv/downloads/aprovados /var/lib/media-triage
+RestrictAddressFamilies=AF_INET AF_UNIX
+IPAddressDeny=any
+IPAddressAllow=192.168.250.10/32
+IPAddressAllow=172.30.40.0/24
+MemoryMax=384M
+CPUQuota=50%
+TimeoutStartSec=7200
+
