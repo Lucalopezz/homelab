@@ -1,0 +1,43 @@
+[Unit]
+Description=Coletar somente mídia aprovada da VM para o Jellyfin
+After=network-online.target docker.service
+RequiresMountsFor=/mnt/dados/lab
+ConditionPathExists=/mnt/dados/lab/secrets/jellyfin-host.json
+[Service]
+Type=oneshot
+DynamicUser=yes
+User=lab-jellyfin-sync
+Group=@LAB_GROUP@
+LoadCredential=ssh-key:/mnt/dados/lab/secrets/jellyfin_pull_ed25519
+LoadCredential=jellyfin-api:/mnt/dados/lab/secrets/jellyfin-host.json
+LoadCredential=known-hosts:/mnt/dados/lab/state/known_hosts
+RuntimeDirectory=lab-jellyfin-sync
+RuntimeDirectoryMode=0700
+WorkingDirectory=/run/lab-jellyfin-sync
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=HOME=/run/lab-jellyfin-sync/state
+Environment=LAB_JELLYFIN_WORKDIR=/run/lab-jellyfin-sync
+ExecStart=/usr/bin/python3 /run/lab-jellyfin-sync/sync.py
+UMask=0027
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_UNIX
+IPAddressDeny=any
+IPAddressAllow=192.168.250.10/32
+IPAddressAllow=127.0.0.1/32
+TemporaryFileSystem=/mnt:ro
+BindReadOnlyPaths=/mnt/dados/lab/jellyfin/sync.py:/run/lab-jellyfin-sync/sync.py /mnt/dados/lab/jellyfin/ssh_config:/run/lab-jellyfin-sync/ssh_config
+BindPaths=/mnt/dados/lab/jellyfin/biblioteca:/run/lab-jellyfin-sync/biblioteca /mnt/dados/lab/jellyfin/.em-recebimento:/run/lab-jellyfin-sync/.em-recebimento /mnt/dados/lab/jellyfin/state:/run/lab-jellyfin-sync/state
+NoExecPaths=/mnt /run/lab-jellyfin-sync
+MemoryMax=384M
+CPUQuota=50%
+TimeoutStartSec=7200

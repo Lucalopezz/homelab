@@ -27,3 +27,8 @@ node_modules/
 *.key
 *.pyc
 __pycache__/
+jellyfin/biblioteca/
+jellyfin/runtime/
+jellyfin/state/
+jellyfin/.em-recebimento/
+jellyfin/config/lab-jellyfin-sync.service

@@ -2,12 +2,15 @@
 
 Para montar uma instalação nova após clonar, siga [REPRODUZIR.md](REPRODUZIR.md).
 Para publicar somente código e documentação, siga [PUBLICAR.md](PUBLICAR.md).
+O fluxo de reprodução no servidor existente está em [JELLYFIN.md](JELLYFIN.md).
+Para ligar, usar e desligar, siga [USO-DIARIO.md](USO-DIARIO.md).
 As instruções para uma LLM estão em [AGENTS.md](AGENTS.md); não reutilize
 autorizações antigas nem execute a criação sobre uma VM já instalada.
 
 > Etapa de busca e download implementada: Sonarr, Radarr, Prowlarr, Seerr,
-> Bazarr e triagem ClamAV dentro da VM. O usuário autorizou conectar o Seerr
-> ao Jellyfin somente para autenticação/catálogo. A única exceção nova ao
+> Bazarr e triagem ClamAV dentro da VM. O Jellyfin existente recebe cópias
+> examinadas por coleta iniciada pelo Fedora, em uma montagem de leitura.
+> A única exceção de API ao
 > bloqueio da VM é `192.168.250.1:8096`; os outros serviços/LAN seguem bloqueados.
 > A VM está usando 6 GiB de RAM. Não foram
 > adicionados monitoramento de espaço ou backups nesta etapa.
@@ -15,7 +18,9 @@ autorizações antigas nem execute a criação sobre uma VM já instalada.
 **Começar pelo [Seerr](http://192.168.250.10:5055)**. Sonarr e Radarr já estão
 cadastrados; basta atualizar a página após o login. Os acessos, as credenciais,
 o fluxo de aprovação e os limites estão em [media-stack/README.md](media-stack/README.md).
-O fornecimento dos novos arquivos ao Jellyfin continua para a próxima etapa.
+A integração de arquivos com o Jellyfin está descrita em
+[JELLYFIN.md](JELLYFIN.md), com biblioteca separada no HD e leitura apenas.
+O volume da VM foi ampliado online de 200 para **400 GiB**, preservando dados.
 
 Escopo: Debian 13 + qBittorrent-nox em KVM, administração por SSH e coleta de
 arquivos via SFTP de leitura. Todos os discos e arquivos próprios do laboratório
@@ -54,7 +59,7 @@ conforme descrito abaixo e no documento da etapa.
 | Nome no libvirt | `lab-downloads` |
 | CPU / RAM | 2 vCPUs / 6144 MiB |
 | Disco do sistema | `disks/system.qcow2`, 20 GiB, VirtIO |
-| Disco de downloads | `disks/downloads.qcow2`, 200 GiB, VirtIO |
+| Disco de downloads | `disks/downloads.qcow2`, 400 GiB, VirtIO |
 | Seed de instalação | `disks/seed.iso` |
 | Rede NAT / bridge | `lab-downloads` / `virbr-dl` |
 | Sub-rede / gateway | `192.168.250.0/24` / `192.168.250.1` |
@@ -110,14 +115,14 @@ instalação existente. Para iniciar a VM quando estiver desligada:
 
 ```bash
 cd /mnt/dados/lab
-sudo bash scripts/start-vm.sh
+sudo bash scripts/start-lab.sh
 ```
 
 ## Instalação automática dentro da VM
 
 O cloud-init configura contas por chave, instala `qbittorrent-nox` e prepara o
 disco adicional. A formatação só é permitida para o dispositivo com serial
-`lab-downloads`, tamanho exato de 200 GiB e sem assinatura existente.
+`lab-downloads`, tamanho exato de 400 GiB e sem assinatura existente.
 O disco vira `/srv/downloads`; a configuração exige essa montagem para iniciar
 `qbittorrent-nox@torrent.service`.
 

@@ -12,4 +12,4 @@ if ! LC_ALL=C virsh -c qemu:///system net-info lab-downloads | grep -Eq '^Active
   LC_ALL=C virsh -c qemu:///system net-start lab-downloads
 fi
 LC_ALL=C virsh -c qemu:///system start lab-downloads
-echo 'A primeira inicialização instala os pacotes no Debian; aguarde o cloud-init.'
+echo 'VM iniciada. Aguarde SSH e aplicações; somente o primeiro boot instala os pacotes pelo cloud-init.'

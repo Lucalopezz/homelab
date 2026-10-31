@@ -5,7 +5,7 @@ exec > >(tee -a /var/log/lab-downloads-setup.log) 2>&1
 
 disk=/dev/disk/by-id/virtio-lab-downloads
 test -b "$disk"
-test "$(blockdev --getsize64 "$disk")" = 214748364800
+test "$(blockdev --getsize64 "$disk")" = 429496729600
 
 # Só inicializar o disco identificado pelo serial, vazio e do tamanho esperado.
 if ! blkid "$disk" >/dev/null 2>&1; then

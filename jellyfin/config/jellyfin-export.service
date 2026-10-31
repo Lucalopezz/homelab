@@ -1,0 +1,23 @@
+[Unit]
+Description=Manifesto de mídia examinada para Jellyfin
+After=media-triage.service clamav-daemon.service
+RequiresMountsFor=/srv/downloads
+AssertPathIsMountPoint=/srv/downloads
+[Service]
+Type=oneshot
+User=triagem
+Group=triagem
+SupplementaryGroups=midia clamav
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 /opt/jellyfin-export/export-manifest.py
+UMask=0027
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/srv/downloads/biblioteca/.publicacao /var/lib/jellyfin-export
+IPAddressDeny=any
+RestrictAddressFamilies=AF_UNIX
+MemoryMax=384M
+CPUQuota=50%
+TimeoutStartSec=7200

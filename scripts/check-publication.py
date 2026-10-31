@@ -9,8 +9,9 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 PRIVATE = {'images', 'disks', 'secrets', 'state', 'backups', 'coleta',
-           'appdata', 'node_modules', '.venv', '__pycache__'}
-GENERATED = {'cloud-init/user-data', 'cloud-init/meta-data', 'cloud-init/network-config'}
+           'appdata', 'runtime', 'biblioteca', '.em-recebimento', 'node_modules', '.venv', '__pycache__'}
+GENERATED = {'cloud-init/user-data', 'cloud-init/meta-data', 'cloud-init/network-config',
+             'jellyfin/config/lab-jellyfin-sync.service'}
 SUFFIXES = {'.qcow2', '.iso', '.torrent', '.dump', '.sqlite3', '.db',
             '.log', '.pem', '.key', '.pyc'}
 PATTERNS = [
@@ -41,8 +42,10 @@ def known_secrets():
     password = ROOT / 'secrets/qbittorrent-password'
     if password.exists():
         values.add(password.read_text().strip().encode())
-    media = ROOT / 'secrets/media-stack.json'
-    if media.exists():
+    for name in ('media-stack.json', 'jellyfin-host.json'):
+        media = ROOT / 'secrets' / name
+        if not media.exists():
+            continue
         for key, value in json.loads(media.read_text()).items():
             if ('password' in key or key.endswith('_key')) and isinstance(value, str):
                 values.add(value.encode())

@@ -6,7 +6,8 @@ Os comandos indicam explicitamente se rodam no **Fedora** ou **dentro da VM**.
 
 O resultado é uma VM com qBittorrent, Sonarr, Radarr, Prowlarr, Bazarr, Seerr,
 ClamAV e coleta SFTP somente de leitura. O Jellyfin existente fornece apenas
-login e catálogo ao Seerr. Reprodução, Nginx, Pi-hole, PostgreSQL, monitoramento
+login e catálogo ao Seerr. A etapa opcional de reprodução no Jellyfin existente
+está em `JELLYFIN.md` e na seção 15. Nginx, Pi-hole, PostgreSQL, monitoramento
 de espaço e backups não fazem parte deste roteiro.
 
 Clonar traz os modelos, não os dados privados: uma instalação nova começa com
@@ -69,7 +70,7 @@ host, as sub-redes dos containers. Os valores do modelo são:
 | MAC da VM | `52:54:00:dd:00:10` |
 | Rede Docker dentro da VM | `172.30.40.0/24` |
 | Recursos | 2 vCPUs, 6144 MiB RAM |
-| Discos qcow2 independentes | Sistema 20 GiB, dados 200 GiB |
+| Discos qcow2 independentes | Sistema 20 GiB, dados 400 GiB |
 | Jellyfin existente | Acessível no gateway do host, TCP 8096 |
 
 Não usar sub-redes sobrepostas ou MAC duplicado. Se adaptar um valor, localizar
@@ -110,6 +111,11 @@ não transforma a VM em cliente livre da rede doméstica.
 Caso o usuário não tenha um Jellyfin existente, concluir os outros serviços e
 deixar a etapa Seerr pendente. Instalar Jellyfin ou escolher outro autenticador
 é uma decisão adicional, não uma dependência a instalar silenciosamente.
+
+A etapa opcional de reprodução também atualiza/recria o Jellyfin existente,
+guarda sua configuração em `lab/jellyfin/runtime` e instala as unidades
+`lab-jellyfin-sync.service` e `.timer` no Fedora. Ela exige a autorização
+específica descrita em `JELLYFIN.md`; não é parte silenciosa da instalação base.
 
 ## 4. Instalar somente as dependências ausentes
 
@@ -198,7 +204,7 @@ Uma VM nova usa `state/known_hosts` novo. Se houver conflito com uma chave
 antiga, conferir a identidade da VM antes de atualizar o registro.
 
 Dentro da VM, o setup só formata o disco com serial `lab-downloads`, tamanho
-de 200 GiB e sem assinatura existente. Ele monta em `/srv/downloads` e exige
+de 400 GiB e sem assinatura existente. Ele monta em `/srv/downloads` e exige
 essa montagem para iniciar o qBittorrent. A conta `labadmin` tem sudo somente
 na VM; `torrent` executa o cliente sem privilégios administrativos.
 
@@ -423,8 +429,8 @@ As contas dos organizadores usam `lab`, com senha em
 `secrets/qbittorrent-password`; Seerr usa o login Jellyfin.
 
 VM e rede ficam sem autostart no Fedora; os serviços iniciam dentro da VM.
-Partida: `sudo bash scripts/start-vm.sh`. Parada graciosa:
-`sudo virsh -c qemu:///system shutdown lab-downloads`, seguida da conferência
+Partida diária: `sudo bash scripts/start-lab.sh`. Parada graciosa:
+`sudo bash scripts/stop-lab.sh`, seguida da conferência
 com `virsh --readonly -c qemu:///system list --all`.
 
 O material deste repositório documenta uma instalação validada, mas a nova
@@ -446,6 +452,31 @@ documentação. A instalação alvo precisa realizar suas próprias verificaçõ
 6. Tratar atualização de imagens, motor antivírus e senhas como manutenção
    explícita, preservando dados e verificando compatibilidade. Não remover
    `.env` para forçar `pull-images.py` a executar novamente.
+
+## 15. Conectar os arquivos ao Jellyfin existente (opcional)
+
+Seguir [JELLYFIN.md](JELLYFIN.md) depois de validar a base. Essa etapa acrescenta
+manifesto de mídia/legendas examinadas na VM, conta SFTP somente de leitura,
+coleta iniciada pelo Fedora, validação SHA256 e bibliotecas separadas no HD.
+Os arquivos chegam a uma montagem somente de leitura do Jellyfin.
+
+O usuário da instalação original escolheu o servidor existente do Fedora.
+Em outra instalação, confirmar essa escolha: a reprodução em outra VM teria
+uma barreira mais forte contra falhas em decodificadores. Não afirmar que
+antivírus ou somente leitura impedem qualquer comprometimento do host.
+
+## 16. Capacidade do volume de downloads
+
+Instalações novas usam 400 GiB. A instalação original começou com 200 GiB e foi
+ampliada online, sem desligar a VM ou formatar o volume, com
+`scripts/expand-downloads-400g.sh`. A operação usa `virsh blockresize` no disco
+em uso e `resize2fs` dentro da VM; não executar `qemu-img resize` em um qcow2
+aberto pelo QEMU. Nunca reduzir o tamanho do dispositivo.
+
+Os 400 GiB são a capacidade compartilhada do volume, não 400 GiB para cada
+etapa do fluxo. As cópias da biblioteca do Jellyfin consomem espaço adicional
+no HD do host. O qcow2 continua crescendo conforme o uso, sem pré-alocar tudo.
+O uso diário está em [USO-DIARIO.md](USO-DIARIO.md).
 
 ## Fontes para conferir versões e comportamento
 

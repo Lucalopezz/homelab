@@ -5,8 +5,9 @@ cópia da VM em funcionamento nem um backup dos seus arquivos.
 
 ## O que acompanha o repositório
 
-- `README.md`, `REPRODUZIR.md`, `PUBLICAR.md` e `AGENTS.md`.
-- `scripts/`, `config/`, `media-stack/` e `cloud-init/setup-guest.sh`.
+- `README.md`, `REPRODUZIR.md`, `PUBLICAR.md`, `JELLYFIN.md`, `USO-DIARIO.md` e `AGENTS.md`.
+- `scripts/`, `config/`, `media-stack/`, `jellyfin/` e `cloud-init/setup-guest.sh`,
+  respeitando os arquivos gerados excluídos pelo `.gitignore`.
 - `media-stack/images.lock.json`: referências públicas das imagens utilizadas,
   sem chaves de API ou senhas.
 - `.gitignore`, que exclui os arquivos privados e gerados.
@@ -25,6 +26,7 @@ reproduzir a configuração.
 | `disks/`, `images/` | Discos da VM, seed e imagens baixadas |
 | `.env`, `credentials.json`, `appdata/` | Configuração de execução e credenciais das aplicações |
 | `state/`, `coleta/`, `backups/` | Logs, resultados locais e arquivos pessoais |
+| `jellyfin/biblioteca`, `runtime`, `state`, `.em-recebimento` | Vídeos, quarentena, usuários/catálogo e temporários do servidor |
 
 Nunca use `git add -f` nesses caminhos. Não envie a pasta inteira como ZIP:
 o `.gitignore` só orienta o Git, não remove arquivos de um arquivo compactado.
@@ -52,8 +54,8 @@ git init -b main
 Adicionar os caminhos explícitos evita depender de `git add .`:
 
 ```bash
-git add .gitignore AGENTS.md README.md REPRODUZIR.md PUBLICAR.md
-git add scripts/ config/ media-stack/ cloud-init/setup-guest.sh
+git add .gitignore AGENTS.md README.md REPRODUZIR.md PUBLICAR.md JELLYFIN.md USO-DIARIO.md
+git add scripts/ config/ media-stack/ jellyfin/ cloud-init/setup-guest.sh
 python3 scripts/check-publication.py
 git diff --cached --stat
 git diff --cached
@@ -100,8 +102,9 @@ Prompt para fornecer à LLM:
 > Depois apresente as mudanças concretas necessárias fora desta pasta e
 > aguarde minha autorização para aplicá-las. Após a autorização, execute as
 > etapas em ordem, valide o resultado e registre as evidências locais. Não
-> recrie dados existentes, não amplie o acesso à LAN e não configure reprodução
-> no Jellyfin. Quando chegar ao login do Seerr/Jellyfin, me oriente a fazê-lo
+> recrie dados existentes e não amplie o acesso à LAN. Se eu escolher conectar
+> um Jellyfin existente, siga também JELLYFIN.md, apresentando as mudanças
+> externas antes de aplicá-las. Quando chegar ao login do Seerr/Jellyfin, me oriente a fazê-lo
 > diretamente na interface, sem pedir minhas senhas no chat.
 
 Clonar cria uma nova instalação com novas credenciais e dados vazios. Recuperar

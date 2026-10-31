@@ -1,0 +1,8 @@
+[Unit]
+Description=Sincronizar biblioteca do Jellyfin a cada dois minutos
+[Timer]
+OnBootSec=120
+OnUnitInactiveSec=120
+Unit=lab-jellyfin-sync.service
+[Install]
+WantedBy=timers.target

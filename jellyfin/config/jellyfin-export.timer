@@ -1,0 +1,8 @@
+[Unit]
+Description=Atualizar manifesto de mídia e legendas aprovadas
+[Timer]
+OnBootSec=120
+OnUnitInactiveSec=120
+Unit=jellyfin-export.service
+[Install]
+WantedBy=timers.target

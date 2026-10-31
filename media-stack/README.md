@@ -15,6 +15,10 @@ Os registros de validação ficam em `../state/`.
 4. Depois de concluir, a triagem verifica os arquivos, consulta o ClamAV e valida
    que o conteúdo de vídeo pode ser reconhecido. Uma cópia examinada é liberada
    para coleta e só então é enviada para importação no organizador.
+5. O Fedora coleta automaticamente a biblioteca examinada e publica no Jellyfin,
+   em **Lab - Filmes** e **Lab - Séries**. Não é preciso mover os arquivos.
+
+O passo a passo ao ligar/desligar o notebook está em [USO-DIARIO.md](../USO-DIARIO.md).
 
 Os indexadores Nyaa.si e Knaben foram testados e sincronizados com os dois
 organizadores. AnimeTosho ficou de fora porque seu feed não resolveu por DNS
@@ -62,7 +66,7 @@ Todos os caminhos abaixo são **dentro da VM**, em discos virtuais do HD:
 | `/srv/downloads/aprovados/.em-analise` | Cópias privadas durante a análise |
 | `/srv/downloads/aprovados/series`, `filmes`, `manuais` | Cópias aprovadas para coleta |
 | `/srv/downloads/aprovados/STATUS/triagem.json` | Resultado e motivo de cada decisão |
-| `/srv/downloads/biblioteca` | Organização e legendas dentro da VM; ainda sem integração de arquivos com o Jellyfin |
+| `/srv/downloads/biblioteca` | Organização e legendas dentro da VM, origem da coleta automática para o Jellyfin |
 
 Os organizadores não recebem montagem de `recebidos`. A pasta `aprovados` é
 montada somente para leitura nos organizadores. A importação automática comum
@@ -91,8 +95,8 @@ O limite automático por arquivo é **2047 MiB**: o ClamAV utilizado tem limite
 técnico de 2 GB. Arquivos maiores e análises que atingem limites ficam para
 revisão, sem serem expostos pela coleta. Os pacotes compactados não são
 extraídos automaticamente. As legendas obtidas depois pelo Bazarr ficam na
-biblioteca da VM; o fluxo de reprodução/coleta dessa biblioteca será tratado
-na etapa do Jellyfin.
+biblioteca da VM e passam pela validação do exportador antes da coleta para
+o Jellyfin. A conta SFTP manual continua mostrando a cópia aprovada original.
 
 O scanner usa o ClamAV LTS 1.4.6 oficial, instalado isoladamente em
 `/opt/clamav-release` dentro da VM, com checksum e assinatura GPG verificados.
@@ -133,10 +137,10 @@ sftp -F /mnt/dados/lab/config/ssh_config lab-downloads-coleta
 # bye
 ```
 
-A conexão com Jellyfin é exclusiva para autenticação e catálogo. A única
-exceção nova no firewall do Fedora permite a VM acessar
-`192.168.250.1:8096`. Nenhuma biblioteca/pasta do Fedora foi compartilhada com
-a VM e não foi configurado o fornecimento dos novos vídeos ao Jellyfin.
+A integração automática com o servidor do Fedora está em [JELLYFIN.md](../JELLYFIN.md).
+O host inicia uma coleta SFTP separada e monta a biblioteca recebida somente
+para leitura no Jellyfin. A exceção de API continua restrita a
+`192.168.250.1:8096`; nenhuma pasta do Fedora é compartilhada com a VM.
 
 ## Operação
 
@@ -174,8 +178,8 @@ sudo -u triagem python3 /opt/media-stack/triage/triage.py --retry HASH_DO_TORREN
   responderam ao Fedora para comparação.
 - Serviços e timer habilitados dentro da VM, com 6 GiB de RAM em uso.
 
-O Fedora não foi reiniciado nesta etapa. Os resultados não incluem um teste de
-reprodução pelo Jellyfin, que ainda não recebe esses arquivos.
+A etapa inicial não incluía reprodução. A integração e seus testes posteriores
+estão em [JELLYFIN.md](../JELLYFIN.md) e nos relatórios privados de `state/`.
 
 ## Referências
 

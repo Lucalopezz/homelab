@@ -25,9 +25,12 @@ uma instalação existente; o histórico não é uma lista de comandos para repe
 - Escopo: VM Debian com qBittorrent, Sonarr, Radarr, Prowlarr, Bazarr, Seerr,
   triagem ClamAV e coleta SFTP de leitura. Sem Nginx, Pi-hole, PostgreSQL,
   monitoramento de espaço ou backups novos.
-- Jellyfin existente: somente autenticação/catálogo do Seerr, por exceção
-  específica de rede. Configurar reprodução, novas bibliotecas ou instalar
-  Jellyfin exige uma decisão adicional do usuário.
+- A integração opcional com o Jellyfin existente está em `JELLYFIN.md`. O
+  usuário desta instalação escolheu biblioteca separada no HD e montagem de
+  leitura no servidor do Fedora, com menor isolamento que uma VM de reprodução.
+  Não usar essa escolha como autorização em outra instalação: confirmar o
+  servidor alvo e as mudanças externas na sessão atual. Não criar outro
+  Jellyfin ou ampliar acesso à LAN/internet sem uma decisão do usuário.
 - Não inventar credenciais de Jellyfin ou de indexadores. Login interativo deve
   ser feito pelo usuário, sem pedir senhas no chat.
 - Não publicar discos, mídias, chaves, senhas, hashes de senha, `.env`, configs

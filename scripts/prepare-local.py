@@ -56,7 +56,7 @@ if not system.exists():
     staging.rename(system)
 data = ROOT / 'disks/downloads.qcow2'
 if not data.exists():
-    subprocess.run(['qemu-img', 'create', '-f', 'qcow2', str(data), '200G'], check=True)
+    subprocess.run(['qemu-img', 'create', '-f', 'qcow2', str(data), '400G'], check=True)
 
 keys = {}
 for account in ('admin', 'coleta'):
