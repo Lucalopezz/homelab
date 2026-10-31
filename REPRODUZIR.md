@@ -322,6 +322,9 @@ e examinar logs, em vez de iniciar múltiplas cópias dos instaladores.
 
 O configurador ajusta o qBittorrent, qualidade e credenciais dos organizadores,
 Prowlarr, indexadores que passarem no teste e perfil de legendas do Bazarr.
+O perfil busca pt-BR e também inglês quando o áudio é inglês, sem considerar
+pt-BR suficiente para encerrar a busca de inglês. Sonarr/Radarr importam
+legendas `srt`, `ass` e `vtt` que passaram pela triagem junto do vídeo.
 O relatório `/opt/media-stack/indexers-result.json` distingue fontes disponíveis
 de pendentes. Na instalação original funcionaram Nyaa.si e Knaben; fontes e
 provedores externos podem mudar. Falha de uma fonte não justifica desativar

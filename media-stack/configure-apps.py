@@ -73,6 +73,9 @@ def configure_arr(app):
         return
     management = api(app, 'GET', 'config/mediamanagement')
     management['copyUsingHardlinks'] = False
+    # Importar também as legendas que já passaram pela triagem com o vídeo.
+    management['importExtraFiles'] = True
+    management['extraFileExtensions'] = 'srt,ass,vtt'
     api(app, 'PUT', 'config/mediamanagement', management)
     download_config = api(app, 'GET', 'config/downloadclient')
     download_config.update({'enableCompletedDownloadHandling': False})
@@ -196,7 +199,8 @@ def configure_prowlarr():
 def configure_bazarr():
     url = 'http://192.168.250.10:6767/api/system/settings'
     headers = {'X-API-KEY': CFG['bazarr_key']}
-    for _ in range(120):
+    # Partida fria no HD pode levar vários minutos.
+    for _ in range(300):
         try:
             response = SESSION.get(url, headers=headers, timeout=3)
             if response.ok:
@@ -206,16 +210,27 @@ def configure_bazarr():
         time.sleep(2)
     else:
         raise RuntimeError('Bazarr não iniciou')
-    profile = {'profileId': 1, 'name': 'Português BR com inglês como alternativa',
-               'cutoff': 1, 'items': [
-                   {'id':1, 'language':'pb', 'hi':'False', 'forced':'False', 'audio_exclude':'False'},
-                   {'id':2, 'language':'en', 'hi':'False', 'forced':'False', 'audio_exclude':'False'}],
+    profile = {'profileId': 1, 'name': 'Português BR + inglês para áudio em inglês',
+               # Não encerrar a busca de inglês só porque já existe pt-BR.
+               'cutoff': 2, 'items': [
+                   {'id':1, 'language':'pb', 'hi':'False', 'forced':'False',
+                    'audio_exclude':'False', 'audio_only_include':'False'},
+                   {'id':2, 'language':'en', 'hi':'False', 'forced':'False',
+                    'audio_exclude':'False', 'audio_only_include':'True'}],
                'mustContain': [], 'mustNotContain': [], 'originalFormat': None}
-    result = SESSION.post(url, headers=headers, timeout=30, data=[
-        ('languages-enabled','pb'), ('languages-enabled','en'),
-        ('languages-profiles',json.dumps([profile]))])
+    profiles_response = SESSION.get(url.replace('system/settings', 'system/languages/profiles'),
+                                    headers=headers, timeout=30)
+    profiles_response.raise_for_status()
+    profiles = [item for item in profiles_response.json() if item['profileId'] != 1] + [profile]
+    languages_response = SESSION.get(url.replace('system/settings', 'system/languages'),
+                                     headers=headers, timeout=30)
+    languages_response.raise_for_status()
+    enabled = {item['code2'] for item in languages_response.json() if item['enabled']} | {'pb', 'en'}
+    result = SESSION.post(url, headers=headers, timeout=120, data=[
+        *[('languages-enabled', language) for language in sorted(enabled)],
+        ('languages-profiles',json.dumps(profiles))])
     result.raise_for_status()
-    print('Bazarr: integração e perfil de legendas pt-BR/inglês preparados.',flush=True)
+    print('Bazarr: pt-BR e inglês obrigatório quando o áudio é inglês.',flush=True)
 
 if __name__ == '__main__':
     configure_qbit()

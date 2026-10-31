@@ -26,7 +26,8 @@ durante a configuração. A disponibilidade de cada título e a qualidade das
 distribuições dependem das fontes; o perfil filtra os resultados encontrados.
 
 O Bazarr recebe as bibliotecas dos organizadores para procurar legendas, com
-perfil pt-BR e inglês como alternativa. Os provedores sem conta configurados
+perfil pt-BR e inglês adicional obrigatório quando o áudio é inglês. Uma legenda
+pt-BR não encerra a busca de inglês. Os provedores sem conta configurados
 não garantem que exista legenda para todo título. Provedores que exigem conta
 precisam de credenciais próprias cadastradas posteriormente pelo usuário.
 
@@ -90,6 +91,10 @@ própria VM. O ClamAV usa socket Unix, sem porta TCP exposta. A aprovação exig
   impedem a aprovação.
 - Assinaturas recentes e resposta limpa do ClamAV; falha do scanner não aprova.
 - Vídeo reconhecido pelo ffprobe ou legenda UTF-8 admitida pela política.
+
+O orçamento agregado `MaxScanSize` é **4095 MiB**, separado do limite de
+arquivo. Ele inclui o original e os dados internos analisados; usar o mesmo
+valor nos dois limites retinha MP4 grandes mesmo abaixo do teto por arquivo.
 
 O limite automático por arquivo é **2047 MiB**: o ClamAV utilizado tem limite
 técnico de 2 GB. Arquivos maiores e análises que atingem limites ficam para
@@ -189,3 +194,11 @@ estão em [JELLYFIN.md](../JELLYFIN.md) e nos relatórios privados de `state/`.
 - [Prowlarr API](https://prowlarr.com/docs/api/)
 - [ClamAV: limites e configuração](https://manpages.debian.org/trixie/clamav-daemon/clamd.conf.5.en.html)
 - [Arquivo de teste EICAR](https://www.eicar.org/download-anti-malware-testfile/)
+
+
+Legendas anexas em CP1252/Latin-1 ou UTF-16 com BOM podem ser convertidas para
+UTF-8 **na cópia privada de análise**, quando a estrutura SRT/ASS/VTT é
+reconhecida e não há controles binários. A cópia convertida é examinada de novo
+pelo ClamAV e recebe seu próprio SHA256. O original do torrent não é alterado;
+formatos inválidos continuam retidos. Há trava por hash para impedir duas
+triagens simultâneas do mesmo torrent.

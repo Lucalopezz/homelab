@@ -61,8 +61,9 @@ nem uma rotina de backup.
 - A conta nova `jellyfin-coleta` só usa SFTP de leitura, com chroot na biblioteca
   da VM. Não tem shell, senha de login, encaminhamento ou acesso aos originais.
 - O exportador na VM usa `triagem`, sem sudo e sem rede. Vídeos precisam
-  corresponder aos hashes aprovados pela primeira triagem. Cópias novas ou
-  alteradas e legendas são examinadas pelo ClamAV e validadas dentro da VM.
+  corresponder aos hashes aprovados pela primeira triagem. O vídeo não repete a análise já concluída: sua leitura sem seguir links deve
+  produzir exatamente o SHA256 de um vídeo aprovado, com tamanho e inode
+  estáveis durante a leitura. Legendas novas são examinadas e validadas na VM.
 - O Fedora recebe somente extensões admitidas, com limite de tamanho, nomes
   controlados e SHA256 exato. Ele não executa FFmpeg, scripts ou arquivos de
   mídia durante a coleta. Publicação só ocorre após a conferência completa.
@@ -146,6 +147,11 @@ Somente depois de concluir a base de [REPRODUZIR.md](REPRODUZIR.md):
 9. Validar vídeo sintético, rejeição de arquivo alterado, permissões de leitura,
    acesso pelo Jellyfin e catálogo Seerr. Registrar versões e resultados em
    `state/`, sem expor credenciais. Não baixar mídia de terceiros para testes.
+10. Para repetir a preferência escolhida nesta instalação, abrir as configurações
+    pessoais do usuário no Jellyfin, **Legendas**, selecionar **Inglês** e o modo
+    **Sempre reproduzir**. Desativar a memorização de escolhas de legenda para
+    que uma escolha anterior de desligá-las não sobreponha esse padrão. Conferir
+    no reprodutor; essa preferência é individual, não cria legendas ausentes.
 
 O instalador das unidades recusa sobrescrever unidades preexistentes, salvo
 com `--update-reviewed-units` depois de revisar a atualização das mesmas duas
@@ -178,6 +184,14 @@ de `lab`. Não montar o banco já migrado da versão 12 em um servidor antigo.
 O estado criado após a migração fica na configuração de `lab` e não aparece na
 cópia antiga. Fazer esse retorno como manutenção explícita, com autorização,
 e preservar os diretórios até confirmar o resultado.
+
+## Limites do antivírus
+
+O tamanho por arquivo continua limitado a 2047 MiB. O orçamento agregado de
+análise (`MaxScanSize`) é 4095 MiB, pois o ClamAV conta também conteúdos internos
+de containers. O orçamento inicial de 2047 MiB fazia um MP4 de cerca de 2 GB
+ficar em revisão sem uma detecção de malware. A opção `AlertExceedsMax` continua
+ativada; atingir qualquer limite ainda impede uma aprovação silenciosa.
 
 ## Verificações concluídas
 
@@ -212,3 +226,11 @@ Biblioteca, temporários, quarentena, estado do Jellyfin, `.env`, unidade render
 para o usuário local e credenciais são privados e ignorados pelo Git. Publicar
 somente código, modelos e documentação. Executar
 `python3 scripts/check-publication.py` antes de preparar o envio.
+
+
+Legendas anexas em CP1252/Latin-1 ou UTF-16 com BOM podem ser convertidas para
+UTF-8 **na cópia privada de análise**, quando a estrutura SRT/ASS/VTT é
+reconhecida e não há controles binários. A cópia convertida é examinada de novo
+pelo ClamAV e recebe seu próprio SHA256. O original do torrent não é alterado;
+formatos inválidos continuam retidos. Há trava por hash para impedir duas
+triagens simultâneas do mesmo torrent.

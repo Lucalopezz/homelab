@@ -2,6 +2,7 @@
 """Libera cópias de mídia somente após validação de tipo e resposta limpa do ClamAV."""
 import argparse
 import datetime as dt
+import fcntl
 import hashlib
 import json
 import os
@@ -83,7 +84,7 @@ def copy_source(source, destination):
         os.close(fd)
     return digest.hexdigest()
 
-def validate_media(path):
+def validate_media(path, normalize_subtitles=False):
     with path.open('rb') as handle:
         header = handle.read(8)
     if header.startswith((b'MZ', b'\x7fELF', b'#!')):
@@ -92,13 +93,38 @@ def validate_media(path):
         if path.stat().st_size > 10 * 1024 * 1024:
             raise Rejected('Legenda excessivamente grande')
         sample = path.read_bytes()
+        normalized_digest = None
         try:
             sample.decode('utf-8-sig')
         except UnicodeDecodeError:
-            raise Review('Legenda sem codificação UTF-8: revisar antes de liberar')
+            if not normalize_subtitles:
+                raise Review('Legenda sem codificação UTF-8: revisar antes de liberar')
+            if sample.startswith((b'\xff\xfe', b'\xfe\xff')):
+                try:
+                    text = sample.decode('utf-16')
+                except UnicodeDecodeError as error:
+                    raise Review('Legenda UTF-16 incompleta ou inválida') from error
+            else:
+                try:
+                    text = sample.decode('cp1252')
+                except UnicodeDecodeError:
+                    text = sample.decode('iso-8859-1')
+            if any((ord(char) < 32 and char not in '\t\r\n') or 127 <= ord(char) < 160 for char in text):
+                raise Review('Legenda contém controles binários não admitidos')
+            suffix = path.suffix.lower()
+            if suffix == '.srt' and not re.search(r'\d{1,2}:\d{2}:\d{2}[,.]\d{3}\s+-->\s+\d{1,2}:\d{2}:\d{2}', text):
+                raise Review('Legenda não reconhecida como SRT')
+            if suffix in {'.ass', '.ssa'} and '[events]' not in text.lower():
+                raise Review('Legenda não reconhecida como ASS/SSA')
+            if suffix == '.vtt' and not text.lstrip().startswith('WEBVTT'):
+                raise Review('Legenda não reconhecida como WebVTT')
+            sample = text.encode('utf-8')
+            path.write_bytes(sample)
+            scan(path)
+            normalized_digest = hashlib.sha256(sample).hexdigest()
         if b'\x00' in sample:
             raise Rejected('Conteúdo binário em legenda')
-        return
+        return normalized_digest
     probe = subprocess.run([
         'ffprobe', '-v', 'error', '-max_alloc', '67108864',
         '-protocol_whitelist', 'file,pipe', '-probesize', '10000000',
@@ -118,7 +144,8 @@ def scan(path):
     if result.returncode == 1:
         reason = (result.stdout + result.stderr).strip()[-1000:]
         if 'Heuristics.Limits.Exceeded' in reason:
-            raise Review('Limite de análise do antivírus atingido')
+            limit = re.search(r'Heuristics\.Limits\.Exceeded[\w.]*', reason)
+            raise Review('Limite de análise do antivírus atingido: ' + (limit.group(0) if limit else 'não especificado'))
         raise Rejected('ClamAV detectou conteúdo suspeito: ' + reason)
     if result.returncode != 0:
         raise RuntimeError('ClamAV indisponível ou não concluiu a análise')
@@ -170,6 +197,14 @@ class Pipeline:
         torrent_hash = torrent['hash']
         if not re.fullmatch('[0-9a-fA-F]{40,64}', torrent_hash):
             raise Rejected('Identificador de torrent inválido')
+        with (STATE / (torrent_hash + '.lock')).open('a') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            return self._process_locked(torrent)
+
+    def _process_locked(self, torrent):
+        torrent_hash = torrent['hash']
+        if not re.fullmatch('[0-9a-fA-F]{40,64}', torrent_hash):
+            raise Rejected('Identificador de torrent inválido')
         existing = self.db.execute('SELECT status,details FROM items WHERE hash=?', (torrent_hash,)).fetchone()
         if existing and existing[0] in ('aprovado', 'reprovado', 'revisao'):
             return
@@ -210,17 +245,21 @@ class Pipeline:
             if not signatures or max(path.stat().st_mtime for path in signatures) < time.time() - 7*86400:
                 raise RuntimeError('Assinaturas do antivírus ausentes ou antigas')
             hashes = {}
+            normalized_subtitles = []
             for item, parts, _ in accepted:
                 dest = stage.joinpath(*parts)
                 hashes[item['name']] = copy_source(save_path.joinpath(*parts), dest)
                 scan(dest)
-                validate_media(dest)
+                normalized_digest = validate_media(dest, normalize_subtitles=True)
+                if normalized_digest:
+                    hashes[item['name']] = normalized_digest
+                    normalized_subtitles.append(item['name'])
             title = re.sub(r'[^\w .()-]', '_', torrent['name'])[:100].strip(' .') or 'download'
             destination = PUBLIC / CATEGORIES[torrent['category']] / (title + '__' + torrent_hash[:8])
             if destination.exists():
                 raise Review('Já existe uma cópia aprovada com esse identificador')
             manifest = {'torrent': torrent['name'], 'hash': torrent_hash, 'verified_at': now(),
-                        'sha256': hashes, 'scanner': 'ClamAV',
+                        'sha256': hashes, 'normalized_subtitles': normalized_subtitles, 'scanner': 'ClamAV',
                         'note': 'Nenhuma ameaça detectada; este resultado não garante ausência de malware.'}
             (stage / 'TRIAGEM.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
             for parent, directories, names in os.walk(stage):
@@ -231,7 +270,7 @@ class Pipeline:
                     os.chown(path, -1, 1100)
                     os.chmod(path, 0o440)
             os.rename(stage, destination)
-            details = {'name': torrent['name'], 'destination': str(destination), 'files': hashes}
+            details = {'name': torrent['name'], 'destination': str(destination), 'files': hashes, 'normalized_subtitles': normalized_subtitles}
             self.record(torrent_hash, 'pendente-importacao', details)
             details['import_command'] = self.import_to_arr(torrent, destination)
             self.record(torrent_hash, 'aprovado', details)
