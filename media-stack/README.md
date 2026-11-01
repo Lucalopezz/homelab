@@ -92,12 +92,12 @@ própria VM. O ClamAV usa socket Unix, sem porta TCP exposta. A aprovação exig
 - Assinaturas recentes e resposta limpa do ClamAV; falha do scanner não aprova.
 - Vídeo reconhecido pelo ffprobe ou legenda UTF-8 admitida pela política.
 
-O orçamento agregado `MaxScanSize` é **4095 MiB**, separado do limite de
+O orçamento agregado `MaxScanSize` é **5120 MiB**, separado do limite de
 arquivo. Ele inclui o original e os dados internos analisados; usar o mesmo
 valor nos dois limites retinha MP4 grandes mesmo abaixo do teto por arquivo.
 
-O limite automático por arquivo é **2047 MiB**: o ClamAV utilizado tem limite
-técnico de 2 GB. Arquivos maiores e análises que atingem limites ficam para
+O limite automático por arquivo é **2560 MiB** para acomodar vídeos de até
+2,5 GiB. Arquivos maiores e análises que atingem limites ficam para
 revisão, sem serem expostos pela coleta. Os pacotes compactados não são
 extraídos automaticamente. As legendas obtidas depois pelo Bazarr ficam na
 biblioteca da VM e passam pela validação do exportador antes da coleta para

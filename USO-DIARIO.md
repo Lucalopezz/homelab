@@ -69,11 +69,11 @@ as cópias aprovadas, sem apontar para os originais brutos.
 - A tag `triagem-aprovada` indica que uma cópia foi liberada. O contador de
   pendentes da sincronização diminui conforme os lotes chegam ao HD.
 - `triagem-revisao`, `triagem-reprovado` ou `triagem-pendente` exigem conferir o
-  motivo. Arquivos individuais acima de **2047 MiB** e distribuições compactadas
+  motivo. Arquivos individuais acima de **2560 MiB** e distribuições compactadas
   não são liberados automaticamente por esta política.
 - Um aviso `Heuristics.Limits.Exceeded.MaxScanSize` significa limite de análise
   atingido, não uma confirmação de malware. O orçamento agregado foi ajustado
-  para 4095 MiB, mantendo o teto individual de 2047 MiB.
+  para 5120 MiB, mantendo o teto individual de 2560 MiB.
 - Após a atualização do Jellyfin para 12.4, use **Ctrl+Shift+R** para recarregar
   a interface. As bibliotecas novas têm o prefixo **Lab -**.
 

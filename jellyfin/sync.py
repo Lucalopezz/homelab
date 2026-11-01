@@ -10,7 +10,7 @@ LIB = BASE / "biblioteca"
 STATE = BASE / "state"
 VIDEO = {".mkv", ".mp4", ".m4v", ".webm", ".avi", ".mov", ".ts", ".m2ts"}
 SUB = {".srt", ".ass", ".ssa", ".vtt"}
-MAX = 2047 * 1024 * 1024
+MAX = 2560 * 1024 * 1024
 
 
 def safe(name):

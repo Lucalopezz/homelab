@@ -384,7 +384,7 @@ Conferir também:
 | Organizadores → aprovados | Montagem somente de leitura |
 | Completed Download Handling | Desativado; o aviso correspondente é esperado |
 | Importação após triagem | Comando aceito e arquivo sintético registrado na biblioteca |
-| Arquivo acima de 2047 MiB | Revisão manual, sem liberação automática |
+| Arquivo acima de 2560 MiB | Revisão manual, sem liberação automática |
 | Scanner indisponível ou assinatura antiga | Sem aprovação |
 | Volume indisponível | qBittorrent e stack não iniciam gravando na raiz |
 | Reinício gracioso da VM | Configurações, volume, serviços e arquivos persistem |

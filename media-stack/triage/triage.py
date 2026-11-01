@@ -19,7 +19,8 @@ import requests
 RAW = Path('/srv/downloads/recebidos')
 PUBLIC = Path('/srv/downloads/aprovados')
 STATE = Path('/var/lib/media-triage')
-MAX_BYTES = 2047 * 1024 * 1024
+MAX_MIB = 2560
+MAX_BYTES = MAX_MIB * 1024 * 1024
 VIDEO = {'.mkv', '.mp4', '.m4v', '.webm', '.avi', '.mov', '.ts', '.m2ts'}
 SUBTITLE = {'.srt', '.ass', '.ssa', '.vtt'}
 DENIED = {'.exe', '.scr', '.bat', '.cmd', '.msi', '.lnk', '.com', '.vbs',
@@ -71,7 +72,7 @@ def copy_source(source, destination):
     try:
         before = os.fstat(fd)
         if before.st_size > MAX_BYTES:
-            raise Review('Arquivo acima de 2047 MiB: ClamAV não pode examiná-lo integralmente')
+            raise Review(f'Arquivo acima de {MAX_MIB} MiB: ClamAV não pode examiná-lo integralmente')
         with os.fdopen(fd, 'rb', closefd=False) as src, destination.open('xb') as dst:
             while chunk := src.read(1024 * 1024):
                 dst.write(chunk)
@@ -237,7 +238,7 @@ class Pipeline:
                 if not item.get('priority') or item.get('progress', 0) < 1:
                     raise Review('Arquivo de mídia não foi baixado integralmente')
                 if item['size'] > MAX_BYTES:
-                    raise Review('Arquivo acima de 2047 MiB: necessária revisão manual')
+                    raise Review(f'Arquivo acima de {MAX_MIB} MiB: necessária revisão manual')
                 accepted.append((item, parts, suffix))
             if not any(suffix in VIDEO for _, _, suffix in accepted):
                 raise Rejected('Torrent sem arquivo de vídeo utilizável')

@@ -77,7 +77,7 @@ nem uma rotina de backup.
 - Se um arquivo gerenciado deixa de constar do manifesto ou falha na conferência,
   sua cópia publicada vai para quarentena privada, sem exclusão definitiva.
   Uma VM desligada não apaga a biblioteca já recebida.
-- O limite de **2047 MiB por arquivo** da triagem continua valendo. Distribuições
+- O limite de **2560 MiB por arquivo** da triagem continua valendo. Distribuições
   compactadas e arquivos maiores não entram automaticamente no Jellyfin.
 
 **Antivírus e leitura apenas não garantem ausência de malware.** O Jellyfin e
@@ -187,8 +187,8 @@ e preservar os diretórios até confirmar o resultado.
 
 ## Limites do antivírus
 
-O tamanho por arquivo continua limitado a 2047 MiB. O orçamento agregado de
-análise (`MaxScanSize`) é 4095 MiB, pois o ClamAV conta também conteúdos internos
+O tamanho por arquivo continua limitado a 2560 MiB. O orçamento agregado de
+análise (`MaxScanSize`) é 5120 MiB, pois o ClamAV conta também conteúdos internos
 de containers. O orçamento inicial de 2047 MiB fazia um MP4 de cerca de 2 GB
 ficar em revisão sem uma detecção de malware. A opção `AlertExceedsMax` continua
 ativada; atingir qualquer limite ainda impede uma aprovação silenciosa.
