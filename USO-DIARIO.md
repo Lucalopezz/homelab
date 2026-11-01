@@ -60,6 +60,12 @@ as cópias aprovadas, sem apontar para os originais brutos.
 
 - `100%` no qBittorrent significa download terminado; análise, importação e
   cópia para o Jellyfin ainda podem estar em andamento.
+- Para filme, o **Radarr** é a alternativa ao catálogo do Seerr: abrir
+  <http://192.168.250.10:7878>, entrar com o usuário `lab`, selecionar **Movies
+  → Add New Movie**, procurar o título e escolher **Add Movie**. O Radarr envia
+  o download ao qBittorrent. Para série, o Sonarr fica em
+  <http://192.168.250.10:8989>. Um container marcado `Up` ainda pode estar
+  esperando o HD antes de aceitar conexões; conferir a página do serviço.
 - A tag `triagem-aprovada` indica que uma cópia foi liberada. O contador de
   pendentes da sincronização diminui conforme os lotes chegam ao HD.
 - `triagem-revisao`, `triagem-reprovado` ou `triagem-pendente` exigem conferir o
