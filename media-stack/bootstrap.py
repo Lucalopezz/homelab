@@ -46,6 +46,10 @@ directory('/srv/downloads/aprovados/.em-analise', 1101, 1101, 0o700)
 for name in ['series', 'filmes']:
     directory('/srv/downloads/biblioteca/' + name, 1100, 1100, 0o2750)
 directory('/var/lib/media-triage', 1101, 1101, 0o700)
+scan_lock = Path('/var/lib/media-triage/clamav-scan.lock')
+scan_lock.touch(exist_ok=True)
+os.chown(scan_lock, 1101, 1101)
+scan_lock.chmod(0o440)
 directory('/etc/media-triage', 0, 1101, 0o750)
 
 triage = {'qbit': {'url': 'http://192.168.250.10:8080', 'password': credentials['qbit_password']}}
@@ -98,7 +102,8 @@ ssh_target.write_text(ssh)
 run('/usr/sbin/sshd', '-t')
 run('systemctl', 'reload', 'ssh')
 
-for name in ['lab-media.service', 'media-triage.service', 'media-triage.timer']:
+for name in ['lab-media.service', 'media-triage.service', 'media-triage.timer',
+             'media-download-watch.service', 'media-download-watch.timer']:
     run('install', '-m', '644', str(root / 'config' / name), '/etc/systemd/system/' + name)
 run('install', '-m', '644', str(root / 'config/clamd.conf'), '/etc/clamav/clamd.conf')
 directory('/etc/systemd/system/clamav-daemon.service.d', 0, 0, 0o755)

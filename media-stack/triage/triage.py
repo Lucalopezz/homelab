@@ -21,6 +21,8 @@ PUBLIC = Path('/srv/downloads/aprovados')
 STATE = Path('/var/lib/media-triage')
 MAX_MIB = 2560
 MAX_BYTES = MAX_MIB * 1024 * 1024
+# MaxScanTime do clamd é 1200 s; o cliente precisa permitir o término do motor.
+SCAN_TIMEOUT = 1260
 VIDEO = {'.mkv', '.mp4', '.m4v', '.webm', '.avi', '.mov', '.ts', '.m2ts'}
 SUBTITLE = {'.srt', '.ass', '.ssa', '.vtt'}
 DENIED = {'.exe', '.scr', '.bat', '.cmd', '.msi', '.lnk', '.com', '.vbs',
@@ -140,8 +142,15 @@ def validate_media(path, normalize_subtitles=False):
         raise Rejected('Vídeo sem duração ou trilha de vídeo utilizável')
 
 def scan(path):
-    result = subprocess.run(['clamdscan', '--fdpass', '--no-summary', str(path)],
-                            capture_output=True, text=True, timeout=660)
+    # LOCK_EX funciona em descritor de leitura no Linux. Assim o exportador
+    # mantém seu filesystem restrito e compartilha a mesma fila do scanner.
+    with (STATE / 'clamav-scan.lock').open('rb') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            result = subprocess.run(['clamdscan', '--fdpass', '--no-summary', str(path)],
+                                    capture_output=True, text=True, timeout=SCAN_TIMEOUT)
+        except subprocess.TimeoutExpired as error:
+            raise RuntimeError('Antivírus excedeu o prazo de análise; arquivo não liberado') from error
     if result.returncode == 1:
         reason = (result.stdout + result.stderr).strip()[-1000:]
         if 'Heuristics.Limits.Exceeded' in reason:
@@ -208,6 +217,9 @@ class Pipeline:
             raise Rejected('Identificador de torrent inválido')
         existing = self.db.execute('SELECT status,details FROM items WHERE hash=?', (torrent_hash,)).fetchone()
         if existing and existing[0] in ('aprovado', 'reprovado', 'revisao'):
+            expected_tag = 'triagem-' + ('aprovada' if existing[0] == 'aprovado' else existing[0])
+            if expected_tag not in {tag.strip() for tag in torrent.get('tags', '').split(',')}:
+                self.tag(torrent_hash, expected_tag)
             return
         if existing and existing[0] == 'pendente-importacao':
             details = json.loads(existing[1])
@@ -288,8 +300,10 @@ class Pipeline:
             if stage.exists():
                 shutil.rmtree(stage)
 
-    def run(self):
+    def run(self, only_hash=None):
         for torrent in self.qget('torrents/info', filter='completed'):
+            if only_hash is not None and torrent['hash'] != only_hash:
+                continue
             if torrent['category'] not in CATEGORIES or torrent['progress'] < 1:
                 continue
             if torrent['state'] in ('checkingUP', 'moving', 'checkingResumeData', 'missingFiles', 'error'):
@@ -300,7 +314,9 @@ class Pipeline:
                 previous = self.db.execute('SELECT status,details FROM items WHERE hash=?', (torrent['hash'],)).fetchone()
                 if not previous or previous[0] not in ('pendente-importacao', 'reprovado', 'revisao'):
                     self.record(torrent['hash'], 'erro', {'name': torrent['name'], 'reason': str(error)[:1000]})
-                self.tag(torrent['hash'], 'triagem-pendente')
+                retained = previous[0] if previous else None
+                tag = 'triagem-' + retained if retained in ('reprovado', 'revisao') else 'triagem-pendente'
+                self.tag(torrent['hash'], tag)
                 print(json.dumps({'hash': torrent['hash'], 'status': 'erro', 'reason': str(error)}, ensure_ascii=False), flush=True)
         report = [{'hash': row[0], 'status': row[1], 'details': json.loads(row[2]), 'updated': row[3]}
                   for row in self.db.execute('SELECT * FROM items ORDER BY updated DESC')]
@@ -314,11 +330,14 @@ class Pipeline:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--retry', help='Reexaminar um hash específico após revisão administrativa')
+    parser.add_argument('--only', help='Processar somente um torrent concluído, preservando a política de análise')
     arguments = parser.parse_args()
+    if arguments.only and not re.fullmatch('[0-9a-fA-F]{40,64}', arguments.only):
+        raise SystemExit('Hash inválido')
     pipeline = Pipeline()
     if arguments.retry:
         if not re.fullmatch('[0-9a-fA-F]{40,64}', arguments.retry):
             raise SystemExit('Hash inválido')
         pipeline.db.execute('DELETE FROM items WHERE hash=?', (arguments.retry,))
         pipeline.db.commit()
-    pipeline.run()
+    pipeline.run(only_hash=arguments.only)

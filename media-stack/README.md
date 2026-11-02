@@ -96,8 +96,11 @@ O orçamento agregado `MaxScanSize` é **5120 MiB**, separado do limite de
 arquivo. Ele inclui o original e os dados internos analisados; usar o mesmo
 valor nos dois limites retinha MP4 grandes mesmo abaixo do teto por arquivo.
 
-O limite automático por arquivo é **2560 MiB** para acomodar vídeos de até
-2,5 GiB. Arquivos maiores e análises que atingem limites ficam para
+O teto configurado por arquivo é **2560 MiB**, mas **não supera o limite
+interno de aproximadamente 2 GiB do ClamAV 1.4.6**. Portanto, vídeos entre
+2 e 2,5 GiB também podem ser retidos com `Heuristics.Limits.Exceeded.MaxFileSize`.
+Esse alerta indica análise incompleta, não detecção de malware. Aumentar
+`MaxFileSize` novamente não resolve esse limite do motor. Arquivos maiores e análises que atingem limites ficam para
 revisão, sem serem expostos pela coleta. Os pacotes compactados não são
 extraídos automaticamente. As legendas obtidas depois pelo Bazarr ficam na
 biblioteca da VM e passam pela validação do exportador antes da coleta para
@@ -110,6 +113,17 @@ motor exige uma manutenção explícita; as imagens dos serviços também estão
 fixadas por digest. Não atualizar rodando novamente os scripts de instalação
 sem revisar o estado e a versão pretendida.
 
+Triagem e exportação compartilham a trava de leitura
+`/var/lib/media-triage/clamav-scan.lock`: só um cliente por vez solicita análise.
+O tempo esperando essa trava não consome o prazo de **1260 segundos** do
+cliente, que cobre os **1200 segundos** permitidos no motor. Timeout continua
+impedindo a aprovação. O limite antigo de 660 segundos podia abandonar uma
+solicitação enquanto o motor ainda trabalhava nela, atrasando as seguintes.
+O bootstrap cria a trava, modo 440, com dono `triagem:triagem`. Ao atualizar
+uma instalação existente, preparar esse arquivo antes de ativar o código;
+não substituir uma trava em uso. `triage.py --only HASH` prioriza um único
+torrent concluído sem ignorar nenhuma validação.
+
 No qBittorrent:
 
 | Tag | Significado |
@@ -118,6 +132,20 @@ No qBittorrent:
 | `triagem-reprovado` | Conteúdo detectado ou distribuição recusada pela política; torrent pausado |
 | `triagem-revisao` | Limite de análise/formato exige revisão manual; torrent pausado |
 | `triagem-pendente` | Erro ou indisponibilidade temporária; cópia não liberada |
+| `erro-sem-progresso` | Download sem progresso por 15 minutos; pausado para liberar a fila, dados preservados |
+
+O timer `media-download-watch.timer` confere a fila a cada minuto dentro da
+VM. Conta apenas tempo observado em download ativo, incluindo espera de
+metadados; tempo na fila, pausado ou com a VM desligada não conta. Não altera
+o limite de duas transferências nem busca/substitui arquivos automaticamente.
+Para revisar, filtre a etiqueta `erro-sem-progresso` no qBittorrent. Depois de
+resolver a fonte, remova a etiqueta e retome o torrent manualmente. A etiqueta
+é um aviso administrativo; não simula um erro de disco no cliente.
+
+Após instalar as unidades na VM, habilitar com
+`sudo systemctl enable --now media-download-watch.timer`. Consultar
+`journalctl -u media-download-watch.service` para ver as retenções. O estado
+privado fica em `/var/lib/media-download-watch/observations.json`.
 
 Uma aprovação reduz riscos e não garante ausência de malware. Não executar
 arquivos coletados automaticamente. O resultado registra SHA256 dos arquivos
@@ -127,6 +155,25 @@ Sonarr e Radarr exibem o aviso **Enable Completed Download Handling**. Essa
 opção fica desativada de propósito: habilitá-la permitiria tentar importar os
 originais antes da triagem. A importação é solicitada pela triagem somente
 depois de liberar a cópia examinada.
+
+## Filmes longos e versões menores
+
+O perfil opcional **Lab - filmes compactos (720p ou SD)** aceita WEB/Bluray
+720p, WEB/Bluray SD e DVD, sem capturas de cinema ou upgrades automáticos.
+Um formato de tamanho obrigatório limita o total da distribuição a **1.8 na
+unidade GB do Radarr**, abaixo de 2 GiB; a triagem ainda precisa aprovar cada
+arquivo. A restrição vale apenas nesse perfil. As definições globais de
+tamanho e o perfil padrão não são alterados.
+
+Para escolher, abra o filme no Radarr, clique em **Editar**, selecione esse
+**Perfil de qualidade** e salve. No Seerr, o perfil também aparece nas opções
+avançadas de solicitação, quando a conta tem permissão para alterá-lo.
+Essa escolha não converte nem apaga automaticamente uma versão já baixada.
+
+Em uma instalação que ainda não tem esse perfil, o script
+`python3 scripts/configure-compact-movies.py` mostra a proposta;
+`python3 scripts/configure-compact-movies.py --apply` cria o perfil via API.
+Ele recusa substituir recursos com o mesmo nome.
 
 ## Coleta e Jellyfin
 

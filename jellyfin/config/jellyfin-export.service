@@ -1,6 +1,6 @@
 [Unit]
 Description=Manifesto de mídia examinada para Jellyfin
-After=media-triage.service clamav-daemon.service
+After=clamav-daemon.service
 RequiresMountsFor=/srv/downloads
 AssertPathIsMountPoint=/srv/downloads
 [Service]

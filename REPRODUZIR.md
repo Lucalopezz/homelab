@@ -384,7 +384,7 @@ Conferir também:
 | Organizadores → aprovados | Montagem somente de leitura |
 | Completed Download Handling | Desativado; o aviso correspondente é esperado |
 | Importação após triagem | Comando aceito e arquivo sintético registrado na biblioteca |
-| Arquivo acima de 2560 MiB | Revisão manual, sem liberação automática |
+| Arquivo acima do limite do motor (aproximadamente 2 GiB no ClamAV 1.4.6) | Revisão manual, sem liberação automática, mesmo com teto configurado de 2560 MiB |
 | Scanner indisponível ou assinatura antiga | Sem aprovação |
 | Volume indisponível | qBittorrent e stack não iniciam gravando na raiz |
 | Reinício gracioso da VM | Configurações, volume, serviços e arquivos persistem |
@@ -412,6 +412,7 @@ Habilitar o timer após conferir o scanner:
 ssh -F config/ssh_config lab-downloads-admin 'sudo bash -s' <<'VM'
 set -euo pipefail
 systemctl enable --now media-triage.timer
+systemctl enable --now media-download-watch.timer
 systemctl start media-triage.service
 systemctl is-active lab-media.service media-triage.timer clamav-daemon.service clamav-freshclam.service qbittorrent-nox@torrent.service
 VM

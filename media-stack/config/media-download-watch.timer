@@ -1,0 +1,11 @@
+[Unit]
+Description=Conferir downloads sem progresso a cada minuto
+
+[Timer]
+OnBootSec=120
+OnUnitInactiveSec=60
+AccuracySec=5
+Unit=media-download-watch.service
+
+[Install]
+WantedBy=timers.target

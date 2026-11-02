@@ -24,6 +24,12 @@ antes. Quando a importação terminar, o arquivo pode aparecer em **Lab - Filmes
 ou **Lab - Séries** no Jellyfin. Os dois timers consultam a cada dois minutos;
 a análise e a atualização do catálogo podem levar mais tempo.
 
+O exportador não espera o lote inteiro de `media-triage.service` terminar:
+confere cada vídeo pelos hashes já aprovados e pela estabilidade da leitura.
+Triagem e exportação compartilham uma trava para solicitações ao ClamAV, com
+prazo do cliente superior aos vinte minutos permitidos pelo motor. Isso evita
+abandonar análises ainda ativas e deixar a fila seguinte esperando por elas.
+
 **Não é necessário mover os arquivos manualmente.** A coleta acontece em lotes
 com checkpoints por arquivo. Uma biblioteca inicial grande pode demorar; os
 próximos lotes continuam automaticamente.
@@ -186,6 +192,12 @@ cópia antiga. Fazer esse retorno como manutenção explícita, com autorizaçã
 e preservar os diretórios até confirmar o resultado.
 
 ## Limites do antivírus
+
+Correção em 01/11/2026: o teto de 2560 MiB descrito abaixo é configurado;
+o ClamAV 1.4.6 possui um limite interno próximo de 2 GiB que ele não amplia.
+O Poderoso Chefão III (cerca de 2,47 GB) foi retido por
+`Heuristics.Limits.Exceeded.MaxFileSize`, sem conclusão da análise. Aumentar
+os números da configuração não permite aprovar esse arquivo integralmente.
 
 O tamanho por arquivo continua limitado a 2560 MiB. O orçamento agregado de
 análise (`MaxScanSize`) é 5120 MiB, pois o ClamAV conta também conteúdos internos
