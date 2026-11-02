@@ -175,6 +175,16 @@ não usar "0 reports downloaded" isoladamente como total de toda a operação.
 
 ### Critérios gerais
 
+Em 02/11/2026, a fonte avulsa de Clone Wars S05E11 ficou sem metadados e foi
+retida pelo watcher. A alternativa encontrada foi um pacote de temporada,
+selecionando somente o E11. A triagem foi ajustada para ignorar mídia com
+prioridade de arquivo zero, preservando as barreiras de caminho, tipos
+perigosos, análise e conclusão dos arquivos selecionados. A alteração foi
+validada com testes sintéticos e instalada sem interromper a triagem em curso;
+novas execuções carregam o código atualizado. O futuro painel deve distinguir
+seleção de arquivos de prioridade da fila e conferir a lista selecionada antes
+de iniciar um pacote, sem deixar downloads de episódios duplicados habilitados.
+
 Preparar a implementação no repositório e validar com respostas simuladas e
 arquivos sintéticos, sem baixar mídia de terceiros apenas para testar. Cobrir
 reinício da VM, APIs indisponíveis, arquivos completos aguardando triagem,

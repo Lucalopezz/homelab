@@ -86,6 +86,13 @@ monitoramento de espaço, remoção automática de mídia ou sistema de backup.
 
 ## Triagem e limites
 
+Pacotes podem ter somente alguns episódios selecionados no qBittorrent. A
+triagem examina e publica apenas os arquivos de mídia com prioridade de arquivo
+maior que zero, exigindo que estejam completos. Arquivos não selecionados não
+entram na cópia aprovada. Caminhos inválidos e tipos perigosos continuam
+recusando a distribuição, mesmo quando não selecionados. Isso permite buscar
+um episódio em outro pacote sem baixar novamente toda a temporada.
+
 O exame roda como usuário `triagem`, sem sudo, com rede limitada às APIs da
 própria VM. O ClamAV usa socket Unix, sem porta TCP exposta. A aprovação exige:
 

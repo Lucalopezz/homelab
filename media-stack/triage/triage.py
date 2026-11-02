@@ -67,6 +67,27 @@ def open_source(path):
 def stamp(info):
     return info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns
 
+def selected_media(files):
+    """Selecionar somente mídia desejada; manter a recusa de distribuições perigosas."""
+    if len(files) > 2000:
+        raise Review('Torrent com quantidade excessiva de arquivos')
+    accepted = []
+    for item in files:
+        parts = safe_parts(item['name'])
+        suffix = Path(parts[-1]).suffix.lower()
+        if suffix in DENIED or re.search(r'\.(?:part\d+\.rar|r\d\d|7z\.\d+)$', item['name'], re.I):
+            raise Rejected('Executável, script, imagem de disco ou pacote compactado na distribuição')
+        if suffix not in VIDEO | SUBTITLE or item.get('priority') == 0:
+            continue
+        if not item.get('priority') or item.get('progress', 0) < 1:
+            raise Review('Arquivo de mídia não foi baixado integralmente')
+        if item['size'] > MAX_BYTES:
+            raise Review(f'Arquivo acima de {MAX_MIB} MiB: necessária revisão manual')
+        accepted.append((item, parts, suffix))
+    if not any(suffix in VIDEO for _, _, suffix in accepted):
+        raise Rejected('Torrent sem arquivo de vídeo utilizável')
+    return accepted
+
 def copy_source(source, destination):
     fd = open_source(source)
     destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -141,11 +162,13 @@ def validate_media(path, normalize_subtitles=False):
     if not streams or float(data.get('format', {}).get('duration', 0)) < 10:
         raise Rejected('Vídeo sem duração ou trilha de vídeo utilizável')
 
-def scan(path):
+def scan(path, on_start=None):
     # LOCK_EX funciona em descritor de leitura no Linux. Assim o exportador
     # mantém seu filesystem restrito e compartilha a mesma fila do scanner.
     with (STATE / 'clamav-scan.lock').open('rb') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        if on_start is not None:
+            on_start()
         try:
             result = subprocess.run(['clamdscan', '--fdpass', '--no-summary', str(path)],
                                     capture_output=True, text=True, timeout=SCAN_TIMEOUT)
@@ -172,6 +195,9 @@ class Pipeline:
             raise RuntimeError('Não foi possível autenticar no qBittorrent')
         self.db = sqlite3.connect(STATE / 'state.sqlite3')
         self.db.execute('CREATE TABLE IF NOT EXISTS items (hash TEXT PRIMARY KEY, status TEXT, details TEXT, updated TEXT)')
+        self.db.execute('CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, hash TEXT, previous_status TEXT, status TEXT, previous_details TEXT, details TEXT, at TEXT)')
+        self.arr = requests.Session()
+        self.arr.trust_env = False
 
     def qget(self, route, **params):
         response = self.qbit.get(self.config['qbit']['url'] + '/api/v2/' + route, params=params, timeout=15)
@@ -180,15 +206,21 @@ class Pipeline:
 
     def tag(self, torrent_hash, tag):
         self.qbit.post(self.config['qbit']['url'] + '/api/v2/torrents/removeTags',
-                       data={'hashes': torrent_hash, 'tags': 'triagem-aprovada,triagem-reprovado,triagem-revisao,triagem-pendente'}, timeout=10).raise_for_status()
+                       data={'hashes': torrent_hash, 'tags': 'triagem-aprovada,triagem-reprovado,triagem-revisao,triagem-pendente,triagem-em-analise,triagem-substituida'}, timeout=10).raise_for_status()
         response = self.qbit.post(self.config['qbit']['url'] + '/api/v2/torrents/addTags',
                                   data={'hashes': torrent_hash, 'tags': tag}, timeout=10)
         response.raise_for_status()
 
     def record(self, torrent_hash, status, details):
-        self.db.execute('INSERT OR REPLACE INTO items VALUES (?,?,?,?)',
-                        (torrent_hash, status, json.dumps(details, ensure_ascii=False), now()))
-        self.db.commit()
+        timestamp = now()
+        encoded = json.dumps(details, ensure_ascii=False)
+        with self.db:
+            previous = self.db.execute('SELECT status,details FROM items WHERE hash=?', (torrent_hash,)).fetchone()
+            self.db.execute('INSERT INTO events (hash,previous_status,status,previous_details,details,at) VALUES (?,?,?,?,?,?)',
+                            (torrent_hash, previous[0] if previous else None, status,
+                             previous[1] if previous else None, encoded, timestamp))
+            self.db.execute('INSERT OR REPLACE INTO items VALUES (?,?,?,?)',
+                            (torrent_hash, status, encoded, timestamp))
 
     def import_to_arr(self, torrent, destination):
         app = {'sonarr': 'sonarr', 'radarr': 'radarr'}.get(torrent['category'])
@@ -196,8 +228,17 @@ class Pipeline:
             return None
         cfg = self.config[app]
         path = '/data/aprovados/' + str(destination.relative_to(PUBLIC))
-        response = requests.post(cfg['url'] + '/api/v3/command',
-            headers={'X-Api-Key': cfg['api_key']}, timeout=15,
+        headers = {'X-Api-Key': cfg['api_key']}
+        current = self.arr.get(cfg['url'] + '/api/v3/command', headers=headers, timeout=(10, 60))
+        current.raise_for_status()
+        for command in current.json():
+            body = command.get('body') or {}
+            if (command.get('status') in ('queued', 'started')
+                    and command.get('name') in ('DownloadedEpisodesScan', 'DownloadedMoviesScan')
+                    and (body.get('path') == path or body.get('downloadClientId') == torrent['hash'])):
+                return command['id']
+        response = self.arr.post(cfg['url'] + '/api/v3/command',
+            headers=headers, timeout=(10, 90),
             json={'name': 'DownloadedEpisodesScan' if app == 'sonarr' else 'DownloadedMoviesScan',
                   'path': path, 'downloadClientId': torrent['hash'], 'importMode': 'Copy'})
         response.raise_for_status()
@@ -216,6 +257,10 @@ class Pipeline:
         if not re.fullmatch('[0-9a-fA-F]{40,64}', torrent_hash):
             raise Rejected('Identificador de torrent inválido')
         existing = self.db.execute('SELECT status,details FROM items WHERE hash=?', (torrent_hash,)).fetchone()
+        if existing and existing[0] == 'substituido':
+            if 'triagem-substituida' not in {tag.strip() for tag in torrent.get('tags', '').split(',')}:
+                self.tag(torrent_hash, 'triagem-substituida')
+            return
         if existing and existing[0] in ('aprovado', 'reprovado', 'revisao'):
             expected_tag = 'triagem-' + ('aprovada' if existing[0] == 'aprovado' else existing[0])
             if expected_tag not in {tag.strip() for tag in torrent.get('tags', '').split(',')}:
@@ -223,6 +268,9 @@ class Pipeline:
             return
         if existing and existing[0] == 'pendente-importacao':
             details = json.loads(existing[1])
+            details['import_attempt_at'] = now()
+            details['import_attempts'] = details.get('import_attempts', 0) + 1
+            self.record(torrent_hash, 'pendente-importacao', details)
             command = self.import_to_arr(torrent, Path(details['destination']))
             details['import_command'] = command
             self.record(torrent_hash, 'aprovado', details)
@@ -232,28 +280,18 @@ class Pipeline:
         if stage.exists():
             shutil.rmtree(stage)
         stage.mkdir(mode=0o700)
+        progress = {'name': torrent['name'], 'started_at': now()}
+        def report(phase, filename=None):
+            progress.update({'phase': phase, 'file': filename, 'phase_started_at': now()})
+            self.record(torrent_hash, 'em-analise', progress)
+        report('preparando')
+        self.tag(torrent_hash, 'triagem-em-analise')
         try:
             save_path = Path(torrent['save_path'])
             if '..' in save_path.parts or not save_path.is_absolute() or not save_path.is_relative_to(RAW):
                 raise Review('Download fora da pasta de recebidos')
             files = self.qget('torrents/files', hash=torrent_hash)
-            if len(files) > 2000:
-                raise Review('Torrent com quantidade excessiva de arquivos')
-            accepted = []
-            for item in files:
-                parts = safe_parts(item['name'])
-                suffix = Path(parts[-1]).suffix.lower()
-                if suffix in DENIED or re.search(r'\.(?:part\d+\.rar|r\d\d|7z\.\d+)$', item['name'], re.I):
-                    raise Rejected('Executável, script, imagem de disco ou pacote compactado na distribuição')
-                if suffix not in VIDEO | SUBTITLE:
-                    continue
-                if not item.get('priority') or item.get('progress', 0) < 1:
-                    raise Review('Arquivo de mídia não foi baixado integralmente')
-                if item['size'] > MAX_BYTES:
-                    raise Review(f'Arquivo acima de {MAX_MIB} MiB: necessária revisão manual')
-                accepted.append((item, parts, suffix))
-            if not any(suffix in VIDEO for _, _, suffix in accepted):
-                raise Rejected('Torrent sem arquivo de vídeo utilizável')
+            accepted = selected_media(files)
             signatures = list(Path('/var/lib/clamav').glob('daily.c[lv]d'))
             if not signatures or max(path.stat().st_mtime for path in signatures) < time.time() - 7*86400:
                 raise RuntimeError('Assinaturas do antivírus ausentes ou antigas')
@@ -261,8 +299,11 @@ class Pipeline:
             normalized_subtitles = []
             for item, parts, _ in accepted:
                 dest = stage.joinpath(*parts)
+                report('copiando', item['name'])
                 hashes[item['name']] = copy_source(save_path.joinpath(*parts), dest)
-                scan(dest)
+                report('aguardando-antivirus', item['name'])
+                scan(dest, on_start=lambda: report('antivirus', item['name']))
+                report('validando-midia', item['name'])
                 normalized_digest = validate_media(dest, normalize_subtitles=True)
                 if normalized_digest:
                     hashes[item['name']] = normalized_digest
@@ -301,7 +342,11 @@ class Pipeline:
                 shutil.rmtree(stage)
 
     def run(self, only_hash=None):
-        for torrent in self.qget('torrents/info', filter='completed'):
+        states = dict(self.db.execute('SELECT hash,status FROM items'))
+        priority = {'pendente-importacao': 0, 'reanalise-agendada': 1, 'erro': 2, 'em-analise': 2}
+        torrents = self.qget('torrents/info', filter='completed')
+        torrents.sort(key=lambda t: priority.get(states.get(t['hash']), 3))
+        for torrent in torrents:
             if only_hash is not None and torrent['hash'] != only_hash:
                 continue
             if torrent['category'] not in CATEGORIES or torrent['progress'] < 1:
@@ -312,7 +357,12 @@ class Pipeline:
                 self.process(torrent)
             except Exception as error:
                 previous = self.db.execute('SELECT status,details FROM items WHERE hash=?', (torrent['hash'],)).fetchone()
-                if not previous or previous[0] not in ('pendente-importacao', 'reprovado', 'revisao'):
+                if previous and previous[0] == 'pendente-importacao':
+                    details = json.loads(previous[1])
+                    details['import_error'] = str(error)[:1000]
+                    details['import_error_at'] = now()
+                    self.record(torrent['hash'], 'pendente-importacao', details)
+                elif not previous or previous[0] not in ('reprovado', 'revisao', 'substituido'):
                     self.record(torrent['hash'], 'erro', {'name': torrent['name'], 'reason': str(error)[:1000]})
                 retained = previous[0] if previous else None
                 tag = 'triagem-' + retained if retained in ('reprovado', 'revisao') else 'triagem-pendente'
@@ -338,6 +388,15 @@ if __name__ == '__main__':
     if arguments.retry:
         if not re.fullmatch('[0-9a-fA-F]{40,64}', arguments.retry):
             raise SystemExit('Hash inválido')
-        pipeline.db.execute('DELETE FROM items WHERE hash=?', (arguments.retry,))
-        pipeline.db.commit()
-    pipeline.run(only_hash=arguments.only)
+        if arguments.only and arguments.only != arguments.retry:
+            raise SystemExit('--only e --retry devem indicar o mesmo torrent')
+        with (STATE / (arguments.retry + '.lock')).open('a') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            row = pipeline.db.execute('SELECT status,details FROM items WHERE hash=?', (arguments.retry,)).fetchone()
+            if row:
+                details = json.loads(row[1])
+                if row[0] in ('aprovado', 'substituido'):
+                    raise SystemExit('Aprovação ou substituição existente: usar recuperação administrativa, sem apagar evidência')
+                details['retry_requested_at'] = now()
+                pipeline.record(arguments.retry, 'pendente-importacao' if row[0] == 'pendente-importacao' else 'reanalise-agendada', details)
+    pipeline.run(only_hash=arguments.only or arguments.retry)
