@@ -133,7 +133,7 @@ def validate_media(path, normalize_subtitles=False):
         '-protocol_whitelist', 'file,pipe', '-probesize', '10000000',
         '-analyzeduration', '5000000', '-show_entries',
         'stream=codec_type,width,height:format=duration', '-of', 'json', str(path),
-    ], capture_output=True, text=True, timeout=45)
+    ], capture_output=True, text=True, timeout=180)
     if probe.returncode:
         raise Rejected('Arquivo não reconhecido como vídeo válido')
     data = json.loads(probe.stdout)

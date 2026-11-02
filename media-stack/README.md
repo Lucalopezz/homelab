@@ -119,6 +119,9 @@ O tempo esperando essa trava não consome o prazo de **1260 segundos** do
 cliente, que cobre os **1200 segundos** permitidos no motor. Timeout continua
 impedindo a aprovação. O limite antigo de 660 segundos podia abandonar uma
 solicitação enquanto o motor ainda trabalhava nela, atrasando as seguintes.
+O prazo do `ffprobe` é de 180 segundos: o limite anterior de 45 segundos
+expirava em arquivos válidos quando o HD estava ocupado. Falha ou timeout
+continuam impedindo a aprovação; o serviço tenta novamente erros temporários.
 O bootstrap cria a trava, modo 440, com dono `triagem:triagem`. Ao atualizar
 uma instalação existente, preparar esse arquivo antes de ativar o código;
 não substituir uma trava em uso. `triage.py --only HASH` prioriza um único
