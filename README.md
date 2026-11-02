@@ -130,7 +130,8 @@ Na configuração atual, as pastas `incompletos`, `recebidos`, `aprovados` e
 `biblioteca` ficam nesse disco; as configurações e o
 estado do cliente ficam no disco do sistema. O painel exige autenticação;
 UPnP/NAT-PMP e descoberta de peers na LAN começam desligados. A fila permite
-dois downloads simultâneos. O upload começa limitado a 256 KiB/s; ajustar ao
+quatro downloads simultâneos, até dois uploads e seis torrents ativos no total.
+O upload começa limitado a 256 KiB/s; ajustar ao
 desempenho da conexão pelo painel.
 
 A primeira instalação falhou porque o encaminhamento do Docker impedia a saída
@@ -200,7 +201,7 @@ virsh --readonly -c qemu:///system list --all
 | --- | --- |
 | Esquemas cloud-init de usuário e rede | Válidos |
 | API sem autenticação / com a senha gerada | Acesso negado / login válido |
-| Pastas, fila de dois downloads, UPnP, descoberta local e execução automática | Configurações conferidas pela API |
+| Pastas, fila (dois downloads na validação inicial), UPnP, descoberta local e execução automática | Configurações conferidas pela API |
 | Download BitTorrent oficial | Amostra de 4,8 MB recebida; 33 seeds conectados no registro; teste removido |
 | VM → internet | HTTPS para Debian funciona |
 | VM → SSH do Fedora e IPs físicos do host | Bloqueados |
@@ -244,6 +245,17 @@ Não há encaminhamento da porta P2P ou do painel para a LAN/internet.
 Backups de disco devem ser feitos com a VM desligada ou por um procedimento
 consistente de snapshots. O disco virtual limita a capacidade dentro da VM;
 acompanhar o espaço livre do HD, pois qcow2 e snapshots ainda o consomem.
+
+## Próximo passo acordado
+
+Em 02/11/2026, o usuário pediu quatro downloads simultâneos. O teto total foi
+ajustado para seis torrents ativos, permitindo os quatro downloads e os dois
+uploads já configurados. A alteração usa as preferências do qBittorrent, sem
+recriar a VM nem repetir a instalação.
+
+Depois que os downloads atuais terminarem, implementar o painel de acompanhamento
+e a recuperação de faltantes descritos em [PROXIMOS-PASSOS.md](PROXIMOS-PASSOS.md).
+A implementação foi adiada pelo usuário; não há ativação agendada.
 
 ## Referências oficiais
 

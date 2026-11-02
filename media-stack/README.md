@@ -140,7 +140,7 @@ No qBittorrent:
 O timer `media-download-watch.timer` confere a fila a cada minuto dentro da
 VM. Conta apenas tempo observado em download ativo, incluindo espera de
 metadados; tempo na fila, pausado ou com a VM desligada não conta. Não altera
-o limite de duas transferências nem busca/substitui arquivos automaticamente.
+o limite de quatro downloads simultâneos nem busca/substitui arquivos automaticamente.
 Para revisar, filtre a etiqueta `erro-sem-progresso` no qBittorrent. Depois de
 resolver a fonte, remova a etiqueta e retome o torrent manualmente. A etiqueta
 é um aviso administrativo; não simula um erro de disco no cliente.

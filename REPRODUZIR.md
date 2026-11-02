@@ -379,7 +379,7 @@ Conferir também:
 | Seerr → Sonarr/Radarr | Testes de conexão aprovados, diretórios/perfil corretos |
 | Busca do catálogo | Retorna metadados |
 | Prowlarr → organizadores | Fontes testadas e sincronizadas |
-| qBittorrent | Login exigido, duas transferências de download, destinos corretos, autorun e UPnP desativados |
+| qBittorrent | Login exigido, quatro downloads, dois uploads e seis torrents ativos no total, destinos corretos, autorun e UPnP desativados |
 | Organizadores → originais | Nenhuma montagem de `recebidos` |
 | Organizadores → aprovados | Montagem somente de leitura |
 | Completed Download Handling | Desativado; o aviso correspondente é esperado |

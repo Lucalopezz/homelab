@@ -56,6 +56,13 @@ pelo Seerr. Downloads manuais aprovados ficam disponíveis para coleta SFTP;
 se necessário, é preciso identificá-los e importá-los no Sonarr/Radarr usando
 as cópias aprovadas, sem apontar para os originais brutos.
 
+A fila permite **quatro downloads simultâneos**, até dois uploads e seis
+torrents ativos no total. A velocidade de download não tem teto configurado.
+
+Depois dos downloads atuais, o próximo passo será o
+[painel de acompanhamento e recuperação de faltantes](PROXIMOS-PASSOS.md).
+Essa melhoria ainda não foi implementada nem agendada.
+
 ## Se algo não aparecer
 
 - `100%` no qBittorrent significa download terminado; análise, importação e
