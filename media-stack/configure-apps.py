@@ -183,6 +183,8 @@ def configure_prowlarr():
         model = copy.deepcopy(model)
         model.update({'enable': True, 'appProfileId': 1, 'priority': 25})
         fields(model, {'minimumSeeders': 5})
+        if wanted == 'Knaben':
+            fields(model, {'torrentBaseSettings.preferMagnetUrl': True})
         try:
             created = ensure_model('prowlarr','indexer',model)
             successes.append({'name': wanted, 'id': created['id']})

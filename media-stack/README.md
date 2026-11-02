@@ -25,6 +25,12 @@ organizadores. AnimeTosho ficou de fora porque seu feed não resolveu por DNS
 durante a configuração. A disponibilidade de cada título e a qualidade das
 distribuições dependem das fontes; o perfil filtra os resultados encontrados.
 
+No Knaben, a opção avançada **Prefer Magnet URL** fica habilitada. Em 02/11/2026,
+links intermediários `knaben.org/live/dl/…` responderam HTTP 501 e impediram
+o Sonarr de enviar distribuições encontradas para download. Preferir o magnet
+usa o identificador oferecido pelo próprio indexador e evita esse intermediário.
+Não altera os filtros de qualidade, idioma, episódio ou a triagem.
+
 O Bazarr recebe as bibliotecas dos organizadores para procurar legendas, com
 perfil pt-BR e inglês adicional obrigatório quando o áudio é inglês. Uma legenda
 pt-BR não encerra a busca de inglês. Os provedores sem conta configurados
@@ -210,12 +216,41 @@ ssh -F config/ssh_config lab-downloads-admin \
   'sudo journalctl -u media-triage.service -n 50 --no-pager'
 ```
 
-Um hash recusado só deve ser reexaminado após entender o motivo. O administrador
-pode executar dentro da VM:
+Um hash recusado só deve ser reexaminado após entender o motivo. Se o motivo
+for "Já existe uma cópia aprovada com esse identificador", usar a recuperação
+abaixo antes de `--retry`: apagar o registro e tentar copiar tudo novamente
+reproduz o conflito. Para outros casos elegíveis, o administrador pode executar
+dentro da VM:
 
 ```bash
 sudo -u triagem python3 /opt/media-stack/triage/triage.py --retry HASH_DO_TORRENT
 ```
+
+### Recuperação administrativa de publicação
+
+`recover-publication.py` recupera o registro de uma pasta já examinada após
+conferir seu manifesto e SHA256. Também pode substituir uma cópia incompleta
+na biblioteca a partir da cópia aprovada, com temporário e troca atômica.
+Não se aplica a reprovações por malware nem a outros motivos de revisão.
+
+No Fedora, apresentar o plano sem alterar a mídia:
+
+```bash
+ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -F config/ssh_config lab-downloads-admin \
+  'sudo -n python3 - --hash HASH_DO_TORRENT' < media-stack/recover-publication.py
+```
+
+Após revisar o motivo, acrescentar `--apply` ao comando remoto para conferir
+os arquivos e aplicar a recuperação. Para uma cópia incompleta específica,
+acrescentar também `--repair-path "series/Série/Season 1/episódio.mkv"`, com
+o caminho exato relativo à biblioteca. Conferir antes que não há importação
+ativa sobre esse destino. A rotina se recusa a substituir cópias recentes,
+arquivos que mudem durante a operação ou destinos que não sejam menores que
+o original aprovado. Os parciais são preservados em `biblioteca/.recuperacao`,
+fora da publicação; não são apagados automaticamente.
+
+Não há timer dessa recuperação. A integração ao painel e as condições para
+ações automáticas estão em [PROXIMOS-PASSOS.md](../PROXIMOS-PASSOS.md).
 
 ## Validação concluída
 

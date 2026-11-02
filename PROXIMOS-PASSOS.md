@@ -90,6 +90,91 @@ direta para ignorar rejeições silenciosamente. Informar ausência de fonte vá
 
 ## Implantação e validação futuras
 
+### Recuperação de publicação: incidente de 02/11/2026
+
+O diagnóstico encontrou 14 episódios de Bleach (S17E27–E40) bloqueados porque
+o registro do pacote virou `revisao` com o motivo "Já existe uma cópia aprovada
+com esse identificador", apesar de existir `TRIAGEM.json` na cópia aprovada.
+Family Guy S24E13 e Clone Wars S02E12 tinham cópias menores e antigas na
+biblioteca, com originais aprovados completos. Clone Wars S02E18 foi retido
+durante uma alteração do arquivo e saiu da lista na execução seguinte.
+
+A rotina administrativa `media-stack/recover-publication.py` foi criada para
+esse tipo de recuperação. Sem `--apply` apresenta o plano; com `--apply`:
+
+- Para o conflito específico de pasta já aprovada, verifica a propriedade e
+  as permissões do manifesto, o identificador e os SHA256 de todos os arquivos
+  antes de recuperar o registro. A recuperação não se aplica a detecção de
+  malware ou a outros motivos de revisão. O exportador continua conferindo
+  separadamente os arquivos organizados contra os hashes aprovados.
+- Para uma cópia incompleta selecionada com `--repair-path`, exige um original
+  aprovado correspondente, um destino menor e sem alteração recente. Copia
+  para um temporário, confere SHA256, sincroniza e troca o destino atomicamente.
+  Uma mudança no destino durante a operação cancela a substituição.
+- Preserva a cópia parcial em `biblioteca/.recuperacao`, fora da coleta, sem
+  apagá-la automaticamente. Esses arquivos continuam ocupando espaço até uma
+  eventual limpeza explicitamente autorizada.
+
+A rotina usa trava por torrent; não agenda buscas, não baixa novamente e não
+foi adicionada aos timers. Antes do uso administrativo, conferir também que
+não há importações do organizador em execução sobre os destinos escolhidos.
+O arquivo pode ser executado dentro da VM por stdin, evitando instalação de
+outro serviço. Os testes sintéticos estão em `media-stack/test_recover_publication.py`.
+
+No futuro painel, acrescentar **Recuperar aprovação existente** e
+**Refazer cópia aprovada**, com motivo e resultado visíveis. A evolução
+automática deve ainda:
+
+1. Separar falha de download, falha de importação e retenção de publicação;
+   tentar reparar cópias existentes antes de procurar outra distribuição.
+2. Tornar a triagem idempotente depois de uma interrupção entre a publicação
+   da pasta aprovada e o registro no SQLite. Uma pasta existente deve ser
+   conferida e reconciliada, sem descartar o registro anterior por conflito.
+3. Substituir a exclusão antecipada do registro feita por `--retry` por uma
+   recuperação sob trava, preservando a evidência anterior e o histórico.
+4. Tratar mudanças durante cópia/importação como espera temporária; conferir
+   conclusão do comando, estabilidade e integridade antes de publicar.
+5. Detectar cópias parciais antigas sem depender apenas do estado "aprovado"
+   ou "importado" e recuperar somente a partir de bytes aprovados verificáveis.
+   Antes de automatizar a substituição, confirmar a origem pelo identificador
+   do download, histórico de importação e episódio/arquivo do organizador.
+   Tamanho menor ou nome parecido, isoladamente, não provam uma cópia interrompida;
+   uma versão transcodificada ou uma alteração intencional deve ir para revisão.
+6. Manter tentativas e checkpoints persistentes, evitando repetir conferências
+   de um pacote inteiro após cada interrupção. Só ativar ações automáticas
+   depois de validar concorrência, interrupções e os controles do organizador.
+
+### Faltantes sem download e falha de entrega do indexador
+
+Também foram identificados seis episódios solicitados de Family Guy sem torrent,
+sem registro de triagem e sem evento de download: S22E03/E07/E09 e S24E05/E08/E09.
+As temporadas 21 e 23 estavam completas; o pedido do Seerr cobre 21–24.
+Uma nova busca encontrou fontes para S22E03, mas a entrega falhou em um endereço
+intermediário do Knaben com HTTP 501. O Sonarr passou a omitir temporariamente
+esse indexador após as falhas; o rótulo "API Grab Limit reached" no log do Sonarr
+não provou uma quota configurada: os limites locais de consulta/download estavam
+vazios e o erro original no Prowlarr era o HTTP 501.
+
+A opção suportada `torrentBaseSettings.preferMagnetUrl` foi habilitada apenas
+no Knaben; os testes de conexão do Prowlarr e do Sonarr passaram. O modelo de
+instalação passou a usar a mesma preferência. Não foram removidos limites de
+provedor nem alterados os filtros de seleção para corrigir esse transporte.
+
+O futuro script precisa comparar o pedido com os arquivos e a fila completa,
+mesmo quando não há um torrent marcado com erro. Também deve distinguir:
+
+- Nenhum resultado de busca.
+- Resultados rejeitados pelo perfil (exibir o motivo, sem ignorá-lo).
+- Fonte válida encontrada, mas entrega ao cliente falhou.
+- Indexador temporariamente indisponível, com nova tentativa após o recuo.
+- Torrent aceito pelo cliente, mas ainda aguardando metadados ou peers.
+
+Registrar o comando da busca e conferir os torrents aceitos ao final. A mensagem
+final de uma busca com vários episódios pode refletir só o último episódio;
+não usar "0 reports downloaded" isoladamente como total de toda a operação.
+
+### Critérios gerais
+
 Preparar a implementação no repositório e validar com respostas simuladas e
 arquivos sintéticos, sem baixar mídia de terceiros apenas para testar. Cobrir
 reinício da VM, APIs indisponíveis, arquivos completos aguardando triagem,
