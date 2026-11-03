@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fedora: copiar via SFTP, verificar bytes e publicar sem executar mídia."""
 
-import datetime, hashlib, json, os, re, resource, shutil, subprocess, tempfile, time, urllib.request
+import datetime, errno, hashlib, json, os, re, resource, shutil, subprocess, tempfile, time, urllib.request
 from pathlib import Path, PurePosixPath
 
 ROOT = Path("/mnt/dados/lab")
@@ -72,6 +72,89 @@ def sha(path):
         for block in iter(lambda: f.read(1024 * 1024), b""):
             h.update(block)
     return h.hexdigest()
+
+
+def file_stamp(path):
+    st = path.stat(follow_symlinks=False)
+    return [st.st_ino, st.st_size, st.st_mtime_ns, st.st_ctime_ns]
+
+
+def fsync_directory(path):
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def quarantine_file(path, quarantine, name, expected_stamp=None):
+    """Preserve a stale managed file, including across isolated bind mounts."""
+    before = path.stat(follow_symlinks=False)
+    if not path.is_file() or path.is_symlink():
+        raise ValueError("Origem deixou de ser um arquivo regular")
+    initial_stamp = [before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns]
+    if expected_stamp and initial_stamp != expected_stamp:
+        raise ValueError("Origem mudou desde a última publicação; arquivo preservado")
+
+    held = quarantine / (
+        hashlib.sha256(name.encode()).hexdigest()
+        + f"-{before.st_mtime_ns}-{before.st_ino}"
+    )
+    try:
+        os.replace(path, held)
+        fsync_directory(quarantine)
+        fsync_directory(path.parent)
+        return held
+    except OSError as exc:
+        if exc.errno != errno.EXDEV:
+            raise
+
+    # The service exposes LIB and STATE through separate bind mounts. rename(2)
+    # returns EXDEV even when both directories live on the same host filesystem.
+    fd, temporary_name = tempfile.mkstemp(prefix=".quarentena-", dir=quarantine)
+    temporary = Path(temporary_name)
+    copied_hash = hashlib.sha256()
+    copied_size = 0
+    try:
+        with os.fdopen(fd, "wb") as target:
+            with path.open("rb") as source:
+                for block in iter(lambda: source.read(1024 * 1024), b""):
+                    target.write(block)
+                    copied_hash.update(block)
+                    copied_size += len(block)
+            target.flush()
+            os.fsync(target.fileno())
+        os.chmod(temporary, 0o440)
+
+        after_copy = file_stamp(path)
+        if after_copy != initial_stamp:
+            raise ValueError("Origem mudou durante a cópia; arquivo original preservado")
+        if copied_size != before.st_size:
+            raise ValueError("Cópia da quarentena ficou incompleta; origem preservada")
+
+        digest = copied_hash.hexdigest()
+        if held.exists() or held.is_symlink():
+            if (
+                held.is_symlink()
+                or not held.is_file()
+                or held.stat().st_size != copied_size
+                or sha(held) != digest
+            ):
+                raise FileExistsError("Destino de quarentena existente não confere")
+            temporary.unlink()
+        else:
+            os.replace(temporary, held)
+            fsync_directory(quarantine)
+
+        # Keep the original if it changed after the copy or could not be removed.
+        if file_stamp(path) != initial_stamp:
+            raise ValueError("Origem mudou após a cópia; original preservado")
+        path.unlink()
+        fsync_directory(path.parent)
+        return held
+    finally:
+        if temporary.exists():
+            temporary.unlink()
 
 
 def folder(parts):
@@ -236,22 +319,24 @@ def main():
                 errors.append({"path": name, "reason": str(e)})
         # Só retirar arquivos previamente geridos por este importador; preservar em quarentena privada.
         quarantine = STATE / "quarentena"
+        retained = {}
         for name, old in previous.items():
             if name in current:
                 continue
             path = LIB.joinpath(*safe(name))
             if path.is_file() and not path.is_symlink():
-                if not quarantine.exists():
-                    quarantine.mkdir(mode=0o770)
-                    quarantine.chmod(0o770)
-                held = quarantine / (
-                    hashlib.sha256(name.encode()).hexdigest()
-                    + "-"
-                    + str(os.stat(path).st_mtime_ns)
-                )
-                os.replace(path, held)
-                changed += 1
-        atomic_json(record, current)
+                try:
+                    if not quarantine.exists():
+                        quarantine.mkdir(mode=0o770)
+                        quarantine.chmod(0o770)
+                    quarantine_file(path, quarantine, name, old.get("stamp"))
+                    changed += 1
+                except Exception as e:
+                    errors.append({"path": name, "reason": str(e)})
+                    # Retry on the next timer run without blocking publication of
+                    # the remaining files or forgetting this managed source.
+                    retained[name] = old
+        atomic_json(record, {**current, **retained})
         atomic_json(
             STATE / "last-run.json",
             {
