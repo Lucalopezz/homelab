@@ -52,8 +52,8 @@ em outra máquina. O acesso LAN existente continua sujeito às regras do Fedora.
 | Fedora: `lab/jellyfin/runtime/config` | Estado do Jellyfin, com contas e catálogo preservados |
 | Fedora: `lab/jellyfin/runtime/cache` | Cache e transcodificação do Jellyfin |
 
-O início e encerramento estão em [USO-DIARIO.md](USO-DIARIO.md). O volume da VM
-foi ampliado online para **400 GiB**, preservando os downloads.
+O início e encerramento estão em [USO-DIARIO.md](USO-DIARIO.md). Nesta instalação,
+o volume da VM foi ampliado online para **450 GiB**, preservando os downloads.
 
 Todos esses arquivos estão no HD. A separação é feita por diretórios,
 permissões e montagens; não foi criada outra partição ou outra VM. As cópias
@@ -70,6 +70,11 @@ nem uma rotina de backup.
   corresponder aos hashes aprovados pela primeira triagem. O vídeo não repete a análise já concluída: sua leitura sem seguir links deve
   produzir exatamente o SHA256 de um vídeo aprovado, com tamanho e inode
   estáveis durante a leitura. Legendas novas são examinadas e validadas na VM.
+- A cada arquivo conferido, o exportador salva o cache de forma atômica. Após
+  uma interrupção, ele reaproveita entradas com assinatura e atributos ainda
+  válidos, sem publicar um manifesto parcial. Um arquivo interrompido durante a
+  própria leitura precisa ser conferido novamente. O tempo máximo de uma rodada
+  é de seis horas; a alteração da unidade não reinicia uma rodada em andamento.
 - O Fedora recebe somente extensões admitidas, com limite de tamanho, nomes
   controlados e SHA256 exato. Ele não executa FFmpeg, scripts ou arquivos de
   mídia durante a coleta. Publicação só ocorre após a conferência completa.

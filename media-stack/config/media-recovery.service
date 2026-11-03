@@ -1,0 +1,27 @@
+[Unit]
+Description=Reconciliar episódios monitorados e cópias já aprovadas
+After=network-online.target qbittorrent-nox@torrent.service lab-media.service
+RequiresMountsFor=/srv/downloads
+AssertPathIsMountPoint=/srv/downloads
+
+[Service]
+Type=oneshot
+User=triagem
+Group=triagem
+SupplementaryGroups=midia
+StateDirectory=media-recovery
+StateDirectoryMode=0700
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 /opt/media-stack/recover-missing.py --apply
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+RestrictAddressFamilies=AF_INET AF_UNIX
+IPAddressDeny=any
+IPAddressAllow=192.168.250.10/32
+IPAddressAllow=172.30.40.0/24
+MemoryMax=192M
+CPUQuota=50%
+TimeoutStartSec=1800

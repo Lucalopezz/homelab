@@ -1,0 +1,11 @@
+[Unit]
+Description=Conferir episódios monitorados com faltas
+
+[Timer]
+OnBootSec=10min
+OnUnitInactiveSec=1h
+AccuracySec=1min
+Unit=media-recovery.service
+
+[Install]
+WantedBy=timers.target

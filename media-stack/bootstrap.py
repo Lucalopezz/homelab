@@ -103,7 +103,8 @@ run('/usr/sbin/sshd', '-t')
 run('systemctl', 'reload', 'ssh')
 
 for name in ['lab-media.service', 'media-triage.service', 'media-triage.timer',
-             'media-download-watch.service', 'media-download-watch.timer']:
+             'media-download-watch.service', 'media-download-watch.timer',
+             'media-recovery.service', 'media-recovery.timer']:
     run('install', '-m', '644', str(root / 'config' / name), '/etc/systemd/system/' + name)
 run('install', '-m', '644', str(root / 'config/clamd.conf'), '/etc/clamav/clamd.conf')
 directory('/etc/systemd/system/clamav-daemon.service.d', 0, 0, 0o755)

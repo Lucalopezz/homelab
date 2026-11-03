@@ -71,6 +71,11 @@ def configure_arr(app):
     api(app, 'PUT', 'config/host', host)
     if app == 'prowlarr':
         return
+    if app == 'sonarr':
+        naming = api(app, 'GET', 'config/naming')
+        naming['renameEpisodes'] = True
+        naming['animeEpisodeFormat'] = '{Series Title} - S{season:00}E{episode:00} - {Episode Title} {Quality Full}'
+        api(app, 'PUT', 'config/naming', naming)
     management = api(app, 'GET', 'config/mediamanagement')
     management['copyUsingHardlinks'] = False
     # Importar também as legendas que já passaram pela triagem com o vídeo.

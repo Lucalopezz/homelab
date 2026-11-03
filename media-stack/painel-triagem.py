@@ -39,4 +39,9 @@ if pid.isdecimal() and pid != '0':
                 active.append({'hash': match.group(1), 'file': match.group(2), 'phase': 'arquivo aberto pela triagem'})
     except OSError:
         pass
-print(json.dumps({'items': items, 'service': service, 'active': active}, ensure_ascii=False))
+try:
+    with open('/var/lib/media-recovery/status.json', encoding='utf-8') as f:
+        recovery = json.load(f)
+except (OSError, ValueError):
+    recovery = None
+print(json.dumps({'items': items, 'service': service, 'active': active, 'recovery': recovery}, ensure_ascii=False))

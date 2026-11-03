@@ -413,6 +413,7 @@ ssh -F config/ssh_config lab-downloads-admin 'sudo bash -s' <<'VM'
 set -euo pipefail
 systemctl enable --now media-triage.timer
 systemctl enable --now media-download-watch.timer
+systemctl enable --now media-recovery.timer
 systemctl start media-triage.service
 systemctl is-active lab-media.service media-triage.timer clamav-daemon.service clamav-freshclam.service qbittorrent-nox@torrent.service
 VM

@@ -1,10 +1,25 @@
 # Painel e recuperação de episódios faltantes
 
+## Atualização de 03/11/2026
+
+Foi preparado `media-stack/recover-missing.py`, executado pelo timer da VM
+`media-recovery.timer`. Ele reconcilia episódios monitorados usando primeiro
+cópias aprovadas; só solicita buscas para faltas sem fonte identificada, com
+bloqueio conservador diante de nomes ou pacotes ambíguos. O estado das rodadas
+e das tentativas fica em `/var/lib/media-recovery`. A rotina não altera o
+limite de downloads e não contorna o Sonarr, os filtros ou a triagem.
+
+O processo é limitado a séries monitoradas e não garante encontrar fontes,
+resolver qualquer numeração ambígua ou confirmar a presença no Jellyfin. O
+painel existente ainda precisa apresentar os comandos, seus resultados e as
+ações manuais descritas abaixo. A associação automática não substitui essa
+etapa nem a revisão de arquivos não reconhecidos.
+
 ## Decisão de 02/11/2026
 
-O usuário decidiu esperar os downloads atuais terminarem antes de implementar
-esta melhoria. Este documento registra o próximo trabalho; não agenda sua
-execução e não indica que o painel ou as novas tentativas já estejam ativos.
+Na decisão original, o usuário preferiu esperar os downloads em andamento
+antes de implementar esta melhoria. A atualização acima registra o que já foi
+instalado; os itens ainda descritos como futuros continuam pendentes.
 
 Direção escolhida: **ampliar o script existente e criar um painel por cima,
 começando pelos botões manuais e pelo acompanhamento completo; depois ativar

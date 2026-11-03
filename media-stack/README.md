@@ -37,6 +37,27 @@ pt-BR não encerra a busca de inglês. Os provedores sem conta configurados
 não garantem que exista legenda para todo título. Provedores que exigem conta
 precisam de credenciais próprias cadastradas posteriormente pelo usuário.
 
+### Recuperação de episódios monitorados
+
+O serviço `media-recovery.timer` executa a reconciliação em intervalos de uma
+hora. Quando um episódio monitorado e já lançado não tem arquivo no Sonarr,
+ele procura primeiro uma cópia aprovada, exige identificação compatível entre
+o nome da distribuição e a análise do Sonarr, e solicita importação por cópia.
+Ele aguarda buscas ou importações já em andamento e não usa mídia não aprovada.
+
+Se não houver cópia ou torrent correspondente, pode solicitar busca ao Sonarr,
+que mantém seus filtros e indexadores configurados. Pacotes ou nomes que não
+possam ser identificados bloqueiam a busca automática quando houver dúvida,
+evitando duplicações. Há no máximo duas buscas ou quatro importações por rodada,
+até três tentativas por episódio, com intervalo de 24 horas entre tentativas.
+Isso não altera o limite de downloads simultâneos do qBittorrent.
+
+O resultado da última rodada fica em `/var/lib/media-recovery/status.json` e
+as tentativas em `/var/lib/media-recovery/attempts.json` dentro da VM. Uma
+solicitação aceita pelo Sonarr não comprova que o download, importação ou
+publicação foi concluído. O processo não cobre filmes nem substitui a revisão
+manual de associações ambíguas ou fontes rejeitadas.
+
 ## Endereços
 
 | Serviço | Endereço no Fedora |

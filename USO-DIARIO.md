@@ -121,6 +121,21 @@ Legendas acrescentadas pelo Bazarr passam pela validação da publicação e pel
 coleta para o Fedora. Depois da coleta, atualizar o filme no Jellyfin e reabrir
 o reprodutor. As legendas já copiadas continuam disponíveis com a VM desligada.
 
+## Limpeza após importação de 03/11/2026
+
+O processo pontual `media-stack/clean-after-import.py` aguarda o comando de
+importação 5238 terminar e confirma os episódios solicitados no Sonarr e no
+catálogo do Jellyfin antes de iniciar `clean-published-copies.py`. Ele mantém
+o estado em `state/cleanup-after-import-status.json` e os resultados em
+`state/cleanup-after-import.log`; o painel local apresenta esse estado.
+
+A limpeza confere as duas cópias, a aprovação e o catálogo antes de remover
+vídeos recebidos individualmente. Não remove pacotes com vários vídeos, as
+cópias aprovadas ou organizadas, e não é uma limpeza de todas as duplicações.
+O torrent removido deixa de compartilhar. Um erro interrompe a limpeza para
+revisão. A espera é um processo temporário: desligar o computador interrompe
+o agendamento; ele não é iniciado automaticamente após o reinício.
+
 ## Encerrar
 
 Para parar downloads/VM, mantendo o Jellyfin disponível para assistir ao que
@@ -143,7 +158,7 @@ Não use `virsh destroy` nem remova arquivos qcow2 para resolver uma espera.
 
 ## Armazenamento e isolamento
 
-O volume de downloads tem **400 GiB**, compartilhados entre originais, cópias
+O volume de downloads tem **450 GiB**, compartilhados entre originais, cópias
 aprovadas e biblioteca organizada. A cópia do Jellyfin ocupa espaço adicional
 no HD em `lab/jellyfin/biblioteca`; não é um link para os arquivos brutos.
 

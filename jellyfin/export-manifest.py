@@ -11,6 +11,8 @@ t = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(t)
 ROOT = Path("/srv/downloads/biblioteca")
 STATE = Path("/var/lib/jellyfin-export")
+TRIAGE_DB = Path("/var/lib/media-triage/state.sqlite3")
+CLAMAV_DB = Path("/var/lib/clamav")
 t.RAW = ROOT
 
 
@@ -23,10 +25,29 @@ def safe(path):
     return parts
 
 
+def checkpoint_cache(path, data):
+    """Persist verified entries atomically; an interrupted write keeps the old cache."""
+    fd, name = tempfile.mkstemp(prefix=".cache-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(name, path)
+        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        if os.path.exists(name):
+            os.unlink(name)
+
+
 def main(only_prefix=None):
     if only_prefix is not None:
         safe(only_prefix + "/sentinela.mp4")
-    db = sqlite3.connect("file:/var/lib/media-triage/state.sqlite3?mode=ro", uri=True)
+    db = sqlite3.connect("file:" + str(TRIAGE_DB) + "?mode=ro", uri=True)
     approved = set()
     for status, raw in db.execute("SELECT status,details FROM items"):
         if status in ("aprovado", "pendente-importacao"):
@@ -36,7 +57,7 @@ def main(only_prefix=None):
                 if Path(name).suffix.lower() in t.VIDEO
             )
     db.close()
-    daily = list(Path("/var/lib/clamav").glob("daily.c[lv]d"))
+    daily = list(CLAMAV_DB.glob("daily.c[lv]d"))
     signature = max((p.stat().st_mtime_ns for p in daily), default=0)
     if signature < (time.time() - 7 * 86400) * 1e9:
         raise RuntimeError("Assinaturas ausentes ou antigas")
@@ -99,11 +120,18 @@ def main(only_prefix=None):
                             digest = t.copy_source(source, target)
                             t.scan(target)
                             t.validate_media(target)
-                    newcache[relative] = {
+                    fd = t.open_source(source)
+                    try:
+                        if list(t.stamp(os.fstat(fd))) != stamp:
+                            raise t.Rejected("Origem mudou durante a conferência")
+                    finally:
+                        os.close(fd)
+                    entry = {
                         "stamp": stamp,
                         "signature": signature,
                         "sha256": digest,
                     }
+                    newcache[relative] = entry
                     files.append(
                         {
                             "path": relative,
@@ -116,6 +144,13 @@ def main(only_prefix=None):
                     )
                 except Exception as error:
                     rejected.append({"path": relative, "reason": str(error)[:500]})
+                else:
+                    # Keep previous entries until the entire pass succeeds. If the
+                    # process is interrupted, the next pass can reuse each verified
+                    # file without publishing an incomplete manifest.
+                    if cache.get(relative) != entry:
+                        cache[relative] = entry
+                        checkpoint_cache(cache_path, cache)
     # Legendas só acompanham um vídeo aprovado com o mesmo nome base.
     videos = [Path(f["path"]) for f in files if f["kind"] == "video"]
     files = [
@@ -145,7 +180,7 @@ def main(only_prefix=None):
     tmp.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     tmp.chmod(0o440)
     tmp.replace(target)
-    (STATE / "cache.json").write_text(json.dumps(newcache) + "\n")
+    checkpoint_cache(cache_path, newcache)
     (STATE / "report.json").write_text(
         json.dumps(
             {"published": len(files), "held": rejected}, ensure_ascii=False, indent=2

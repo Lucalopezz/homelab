@@ -20,4 +20,4 @@ IPAddressDeny=any
 RestrictAddressFamilies=AF_UNIX
 MemoryMax=384M
 CPUQuota=50%
-TimeoutStartSec=7200
+TimeoutStartSec=21600
