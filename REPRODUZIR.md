@@ -483,6 +483,10 @@ etapa do fluxo. As cópias da biblioteca do Jellyfin consomem espaço adicional
 no HD do host. O qcow2 continua crescendo conforme o uso, sem pré-alocar tudo.
 O uso diário está em [USO-DIARIO.md](USO-DIARIO.md).
 
+Na instalação existente deste laboratório, o volume foi ampliado posteriormente
+para 500 GiB. O script histórico `expand-downloads-400g.sh` não é apropriado
+para essa instalação: seu tamanho-alvo é menor que a capacidade atual.
+
 ## Fontes para conferir versões e comportamento
 
 - [Debian Cloud: build utilizado](https://cloud.debian.org/images/cloud/trixie/20261026-2643/)

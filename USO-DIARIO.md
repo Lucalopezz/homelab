@@ -158,7 +158,7 @@ Não use `virsh destroy` nem remova arquivos qcow2 para resolver uma espera.
 
 ## Armazenamento e isolamento
 
-O volume de downloads tem **450 GiB**, compartilhados entre originais, cópias
+Nesta instalação, o volume de downloads tem **500 GiB**, compartilhados entre originais, cópias
 aprovadas e biblioteca organizada. A cópia do Jellyfin ocupa espaço adicional
 no HD em `lab/jellyfin/biblioteca`; não é um link para os arquivos brutos.
 

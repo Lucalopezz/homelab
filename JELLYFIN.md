@@ -53,7 +53,7 @@ em outra máquina. O acesso LAN existente continua sujeito às regras do Fedora.
 | Fedora: `lab/jellyfin/runtime/cache` | Cache e transcodificação do Jellyfin |
 
 O início e encerramento estão em [USO-DIARIO.md](USO-DIARIO.md). Nesta instalação,
-o volume da VM foi ampliado online para **450 GiB**, preservando os downloads.
+o volume da VM foi ampliado online para **500 GiB**, preservando os downloads.
 
 Todos esses arquivos estão no HD. A separação é feita por diretórios,
 permissões e montagens; não foi criada outra partição ou outra VM. As cópias
