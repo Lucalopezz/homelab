@@ -40,6 +40,13 @@ cd /mnt/dados/lab
 python3 scripts/start-status-panel.py
 ```
 
+O resumo consulta as séries e os filmes monitorados no Sonarr/Radarr a cada
+atualização, incluindo novos pedidos, e compara os itens com a biblioteca do
+laboratório no Jellyfin. Para séries, conta episódios monitorados já lançados;
+o Sonarr pode mostrar outro total por incluir episódios futuros. Se um serviço
+não responder, o painel informa que a consulta está indisponível. O estado da
+limpeza pontual de 03/11 é histórico e não confirma que pedidos novos terminaram.
+
 O painel continua aberto em segundo plano até o computador desligar ou o
 processo ser encerrado; ele é iniciado novamente pelo comando de partida do
 laboratório. Se a porta estiver ocupada, o script avisa e não encerra outro
@@ -94,6 +101,10 @@ e melhorias na recuperação de faltantes continuam em [próximos passos](PROXIM
 - `triagem-revisao`, `triagem-reprovado` ou `triagem-pendente` exigem conferir o
   motivo. Arquivos individuais acima de **2560 MiB** e distribuições compactadas
   não são liberados automaticamente por esta política.
+- O painel mostra **Arquivos grandes detectados** quando a pré-verificação
+  encontra mídia que pode ultrapassar o limite do ClamAV. Ela pode ignorar
+  extras grandes e procurar episódios menores; veja o estado registrado, pois
+  a busca não garante que haverá uma fonte disponível.
 - Um aviso `Heuristics.Limits.Exceeded.MaxScanSize` significa limite de análise
   atingido, não uma confirmação de malware. O orçamento agregado foi ajustado
   para 5120 MiB, mantendo o teto individual de 2560 MiB.

@@ -3,6 +3,7 @@ import importlib.util
 import json
 from pathlib import Path
 import sqlite3
+import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
@@ -58,6 +59,33 @@ class RecoveryStateTests(unittest.TestCase):
         self.assertEqual(json.loads(raw)['files'],details['files'])
         self.assertEqual(json.loads(raw)['import_attempts'],1)
         copy.assert_not_called()
+
+    def test_tag_failure_does_not_overwrite_approved_or_stop_other_items(self):
+        details={'name':'synthetic','destination':'/approved/series/release','files':{'x.mkv':'c'*64},'import_command':17}
+        self.p.record(self.key,'aprovado',details)
+        torrent={'hash':self.key,'name':'synthetic','category':'sonarr','progress':1,'state':'stalledUP'}
+        self.p.qget=Mock(return_value=[torrent])
+        self.p.process=Mock(side_effect=RuntimeError('403 from qBittorrent'))
+        self.p.tag=Mock(side_effect=RuntimeError('still unavailable'))
+        with tempfile.TemporaryDirectory() as directory, patch.object(t,'PUBLIC',Path(directory)), patch.object(t.os,'chown'):
+            (Path(directory)/'STATUS').mkdir()
+            self.p.run()
+        status,raw=self.p.db.execute('SELECT status,details FROM items').fetchone()
+        self.assertEqual(status,'aprovado')
+        self.assertEqual(json.loads(raw)['files'],details['files'])
+        self.assertEqual(json.loads(raw)['import_command'],17)
+        self.assertIn('403',json.loads(raw)['last_error'])
+
+    def test_existing_destination_is_held_before_copy_or_scan(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(t,'PUBLIC',Path(directory)):
+            root=Path(directory);destination=root/'series'/('synthetic__'+self.key[:8]);destination.mkdir(parents=True)
+            (destination/'keep.mkv').write_bytes(b'existing')
+            with patch.object(t,'copy_source') as copy, patch.object(t,'scan') as scan:
+                self.p._process_locked({'hash':self.key,'name':'synthetic','category':'sonarr','tags':''})
+            copy.assert_not_called();scan.assert_not_called()
+            self.assertTrue((destination/'keep.mkv').exists())
+            status,raw=self.p.db.execute('SELECT status,details FROM items').fetchone()
+            self.assertEqual(status,'revisao');self.assertIn('histórico',json.loads(raw)['reason'])
 
     def test_new_import_has_suitable_response_timeout(self):
         self.p.arr.get.return_value.json.return_value=[]

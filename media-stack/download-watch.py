@@ -2,6 +2,7 @@
 """Retém downloads sem progresso; nunca remove dados ou retoma itens pausados."""
 import fcntl
 import json
+import importlib.util
 from pathlib import Path
 import time
 
@@ -54,7 +55,19 @@ def main():
 
         path = STATE / 'observations.json'
         previous = json.loads(path.read_text()) if path.exists() else {}
-        current, stalled = observe(get_torrents(), previous, time.time())
+        torrents = get_torrents()
+        current, stalled = observe(torrents, previous, time.time())
+        # Pré-verificação independente: falha aqui não impede a rotina de travados.
+        try:
+            spec = importlib.util.spec_from_file_location('size_watch', Path(__file__).with_name('size-watch.py'))
+            module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+            cfg_all = json.loads(Path('/etc/media-triage/credentials.json').read_text())
+            issues_path = STATE / 'size-issues.json'
+            issues = json.loads(issues_path.read_text()) if issues_path.exists() else {}
+            module.inspect(session, base, cfg_all['sonarr'], torrents, issues,
+                           lambda: module.save(issues_path, issues))
+        except Exception as exc:
+            print(json.dumps({'size_watch_error': type(exc).__name__}), flush=True)
         # Reconfere progresso/estado imediatamente antes de qualquer parada.
         fresh = {t['hash']: t for t in get_torrents()} if stalled else {}
         for key in stalled:

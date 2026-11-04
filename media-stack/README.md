@@ -111,6 +111,24 @@ Os downloads originais são mantidos para permitir seeding. A cópia aprovada e 
 importação podem consumir espaço adicional no disco virtual. Não foi criado
 monitoramento de espaço, remoção automática de mídia ou sistema de backup.
 
+## Verificação antecipada de tamanho
+
+O timer `media-download-watch.timer` também examina os nomes e tamanhos dos
+arquivos selecionados em downloads de séries ainda em andamento. Vídeos de
+2 GiB ou mais ficam registrados para consulta no painel local. Extras grandes
+em pastas claramente identificadas como `Extras` ou `Featurettes` são retirados
+da seleção somente se existir outro vídeo selecionado. Arquivos já baixados
+não são apagados automaticamente.
+
+Para um episódio grande identificado sem ambiguidade pelo Sonarr, a rotina
+procura uma alternativa individual aprovada pelo perfil, abaixo de 2 GiB e com
+fonte disponível. Se o Sonarr aceitar o envio, o arquivo grande é retirado da
+seleção quando o pacote contém outro vídeo; um arquivo único é mantido. A
+busca não garante download, aprovação nem publicação, e aguarda 24 horas para
+repetir quando não encontra fonte. Casos ambíguos ficam para revisão. O painel
+exibe o último registro em **Arquivos grandes detectados**. O acompanhamento
+não altera torrents concluídos e não substitui a triagem ClamAV.
+
 ## Triagem e limites
 
 Pacotes podem ter somente alguns episódios selecionados no qBittorrent. A
@@ -167,6 +185,11 @@ uma instalação existente, preparar esse arquivo antes de ativar o código;
 não substituir uma trava em uso. `triage.py --only HASH` prioriza um único
 torrent concluído sem ignorar nenhuma validação.
 
+Uma falha ao atualizar a etiqueta no qBittorrent não desfaz uma aprovação
+nem apaga o destino ou o comando de importação já registrado. A etiqueta é
+tentada novamente; se existir um destino sem estado de aprovação confiável,
+a triagem o deixa para revisão antes de copiar ou analisar outra vez.
+
 No qBittorrent:
 
 | Tag | Significado |
@@ -180,7 +203,8 @@ No qBittorrent:
 O timer `media-download-watch.timer` confere a fila a cada minuto dentro da
 VM. Conta apenas tempo observado em download ativo, incluindo espera de
 metadados; tempo na fila, pausado ou com a VM desligada não conta. Não altera
-o limite de quatro downloads simultâneos nem busca/substitui arquivos automaticamente.
+o limite de quatro downloads simultâneos. A pré-verificação de arquivos
+grandes pode solicitar alternativas conforme descrito acima.
 Para revisar, filtre a etiqueta `erro-sem-progresso` no qBittorrent. Depois de
 resolver a fonte, remova a etiqueta e retome o torrent manualmente. A etiqueta
 é um aviso administrativo; não simula um erro de disco no cliente.

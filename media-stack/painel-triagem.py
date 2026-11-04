@@ -44,4 +44,10 @@ try:
         recovery = json.load(f)
 except (OSError, ValueError):
     recovery = None
-print(json.dumps({'items': items, 'service': service, 'active': active, 'recovery': recovery}, ensure_ascii=False))
+try:
+    with open('/var/lib/media-download-watch/size-issues.json', encoding='utf-8') as f:
+        large_files = list(json.load(f).get('items', {}).values())
+except (OSError, ValueError, AttributeError):
+    large_files = []
+print(json.dumps({'items': items, 'service': service, 'active': active, 'recovery': recovery,
+                  'large_files': large_files}, ensure_ascii=False))

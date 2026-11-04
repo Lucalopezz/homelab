@@ -276,6 +276,15 @@ class Pipeline:
             self.record(torrent_hash, 'aprovado', details)
             self.tag(torrent_hash, 'triagem-aprovada')
             return
+        title = re.sub(r'[^\w .()-]', '_', torrent['name'])[:100].strip(' .') or 'download'
+        destination = PUBLIC / CATEGORIES[torrent['category']] / (title + '__' + torrent_hash[:8])
+        # Nunca copiar/examinar de novo quando já existe um destino. A cópia
+        # deve ser reconciliada com o histórico, não automaticamente aprovada.
+        if destination.exists() or destination.is_symlink():
+            details = {'name': torrent['name'], 'reason': 'Já existe uma cópia aprovada com esse identificador; conferir histórico antes de reanalisar', 'destination': str(destination)}
+            self.record(torrent_hash, 'revisao', details)
+            self.tag(torrent_hash, 'triagem-revisao')
+            return
         stage = PUBLIC / '.em-analise' / torrent_hash
         if stage.exists():
             shutil.rmtree(stage)
@@ -357,17 +366,22 @@ class Pipeline:
                 self.process(torrent)
             except Exception as error:
                 previous = self.db.execute('SELECT status,details FROM items WHERE hash=?', (torrent['hash'],)).fetchone()
-                if previous and previous[0] == 'pendente-importacao':
+                if previous and previous[0] in ('aprovado', 'pendente-importacao'):
+                    # Uma falha de etiqueta/rede não invalida a cópia aprovada.
                     details = json.loads(previous[1])
-                    details['import_error'] = str(error)[:1000]
-                    details['import_error_at'] = now()
-                    self.record(torrent['hash'], 'pendente-importacao', details)
+                    details['last_error'] = str(error)[:1000]
+                    details['last_error_at'] = now()
+                    self.record(torrent['hash'], previous[0], details)
                 elif not previous or previous[0] not in ('reprovado', 'revisao', 'substituido'):
                     self.record(torrent['hash'], 'erro', {'name': torrent['name'], 'reason': str(error)[:1000]})
                 retained = previous[0] if previous else None
-                tag = 'triagem-' + retained if retained in ('reprovado', 'revisao') else 'triagem-pendente'
-                self.tag(torrent['hash'], tag)
-                print(json.dumps({'hash': torrent['hash'], 'status': 'erro', 'reason': str(error)}, ensure_ascii=False), flush=True)
+                tag = {'aprovado': 'triagem-aprovada', 'reprovado': 'triagem-reprovado',
+                       'revisao': 'triagem-revisao', 'substituido': 'triagem-substituida'}.get(retained, 'triagem-pendente')
+                try:
+                    self.tag(torrent['hash'], tag)
+                except Exception as tag_error:
+                    print(json.dumps({'hash': torrent['hash'], 'tag_error': type(tag_error).__name__}), flush=True)
+                print(json.dumps({'hash': torrent['hash'], 'status': retained if retained in ('aprovado', 'pendente-importacao', 'reprovado', 'revisao', 'substituido') else 'erro', 'reason': str(error)}, ensure_ascii=False), flush=True)
         report = [{'hash': row[0], 'status': row[1], 'details': json.loads(row[2]), 'updated': row[3]}
                   for row in self.db.execute('SELECT * FROM items ORDER BY updated DESC')]
         output = PUBLIC / 'STATUS/triagem.json'
