@@ -35,7 +35,22 @@ if systemctl is-active --quiet docker.service && docker inspect medias-jellyfin-
   if [ "$(docker inspect --format '{{.State.Running}}' medias-jellyfin-1)" != true ]; then docker start medias-jellyfin-1; fi
 fi
 if [ -f /etc/systemd/system/lab-jellyfin-sync.timer ]; then systemctl start lab-jellyfin-sync.timer; fi
+# O painel precisa das credenciais e da configuração SSH do usuário, não de root.
+panel_user=${SUDO_USER:-}
+if [ -n "$panel_user" ] && [ "$panel_user" != root ] && id "$panel_user" >/dev/null 2>&1; then
+  if ! runuser -u "$panel_user" -- python3 "$root/scripts/start-status-panel.py"; then
+    echo 'Aviso: o painel não iniciou; confira a mensagem acima.' >&2
+  fi
+else
+  echo 'Aviso: inicie o painel como usuário normal: python3 /mnt/dados/lab/scripts/start-status-panel.py' >&2
+fi
 echo 'Laboratório iniciado; aguarde os serviços da VM carregarem.'
-echo 'Seerr: http://192.168.250.10:5055'
-echo 'qBittorrent: http://192.168.250.10:8080'
-echo 'Jellyfin: http://127.0.0.1:8096'
+echo 'Acessos neste computador:'
+echo 'Painel de status: http://127.0.0.1:8765'
+echo 'Seerr:            http://192.168.250.10:5055'
+echo 'qBittorrent:      http://192.168.250.10:8080'
+echo 'Sonarr:           http://192.168.250.10:8989'
+echo 'Radarr:           http://192.168.250.10:7878'
+echo 'Prowlarr:         http://192.168.250.10:9696'
+echo 'Bazarr:           http://192.168.250.10:6767'
+echo 'Jellyfin:         http://127.0.0.1:8096'

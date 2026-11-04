@@ -62,12 +62,18 @@ manual de associações ambíguas ou fontes rejeitadas.
 
 | Serviço | Endereço no Fedora |
 | --- | --- |
+| Painel de status local | <http://127.0.0.1:8765> |
+| Jellyfin | <http://127.0.0.1:8096> |
 | Seerr, catálogo e pedidos | <http://192.168.250.10:5055> |
 | Sonarr, séries e animes | <http://192.168.250.10:8989> |
 | Radarr, filmes | <http://192.168.250.10:7878> |
 | Prowlarr, fontes de busca | <http://192.168.250.10:9696> |
 | Bazarr, legendas | <http://192.168.250.10:6767> |
 | qBittorrent, fila e estado da triagem | <http://192.168.250.10:8080> |
+
+Esses endereços são acessíveis neste Fedora. O painel é iniciado com
+`sudo bash scripts/start-lab.sh` ou, separadamente e sem sudo, com
+`python3 scripts/start-status-panel.py`; não foi aberto para a rede local.
 
 O Seerr autentica com o Jellyfin existente, já cadastrado em `192.168.250.1`,
 porta `8096`, sem HTTPS. Usar o login do Jellyfin diretamente no Seerr.

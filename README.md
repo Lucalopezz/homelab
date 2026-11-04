@@ -253,9 +253,10 @@ ajustado para seis torrents ativos, permitindo os quatro downloads e os dois
 uploads já configurados. A alteração usa as preferências do qBittorrent, sem
 recriar a VM nem repetir a instalação.
 
-Depois que os downloads atuais terminarem, implementar o painel de acompanhamento
-e a recuperação de faltantes descritos em [PROXIMOS-PASSOS.md](PROXIMOS-PASSOS.md).
-A implementação foi adiada pelo usuário; não há ativação agendada.
+O painel local de acompanhamento já existe em <http://127.0.0.1:8765> e é
+iniciado pelo comando diário. Melhorias e ações ainda pendentes estão em
+[PROXIMOS-PASSOS.md](PROXIMOS-PASSOS.md). Consulte [USO-DIARIO.md](USO-DIARIO.md)
+para os endereços de todos os serviços neste computador.
 
 ## Referências oficiais
 

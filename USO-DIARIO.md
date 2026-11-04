@@ -10,7 +10,8 @@ sudo bash scripts/start-lab.sh
 ```
 
 O comando confere o HD e o firewall, inicia a VM existente, mantém o Jellyfin
-em execução e ativa a coleta automática. Pode ser usado novamente se a VM já
+em execução, ativa a coleta automática e inicia o painel local com o usuário
+que chamou o sudo. Pode ser usado novamente se a VM já
 estiver ligada: ele não recria discos nem reinicia os torrents.
 
 No HD, o boot da VM e das aplicações pode levar alguns minutos. Na partida
@@ -21,12 +22,28 @@ a inicialização. Se a interface ainda não abrir, aguarde; não repita instala
 
 | O que fazer | Onde |
 | --- | --- |
+| Acompanhar o andamento do laboratório | [Painel de status](http://127.0.0.1:8765) |
 | Procurar e solicitar filmes, séries e temporadas | [Seerr](http://192.168.250.10:5055) |
 | Acompanhar downloads e tags da triagem | [qBittorrent](http://192.168.250.10:8080) |
 | Assistir em **Lab - Filmes** ou **Lab - Séries** | [Jellyfin](http://127.0.0.1:8096) |
 | Investigar séries/importações | [Sonarr](http://192.168.250.10:8989) |
 | Investigar filmes/importações | [Radarr](http://192.168.250.10:7878) |
+| Investigar fontes de busca | [Prowlarr](http://192.168.250.10:9696) |
 | Procurar e acompanhar legendas | [Bazarr](http://192.168.250.10:6767) |
+
+Esses endereços são para abrir no navegador deste Fedora. O painel fica restrito
+a `127.0.0.1`; as páginas da VM usam a rede privada já existente. Se for
+preciso iniciar apenas o painel, sem sudo:
+
+```bash
+cd /mnt/dados/lab
+python3 scripts/start-status-panel.py
+```
+
+O painel continua aberto em segundo plano até o computador desligar ou o
+processo ser encerrado; ele é iniciado novamente pelo comando de partida do
+laboratório. Se a porta estiver ocupada, o script avisa e não encerra outro
+programa. O registro fica em `state/painel-local.log`.
 
 Seerr e Jellyfin usam seu login do Jellyfin, preservado na atualização. No
 qBittorrent, o usuário é `admin`; a senha fica em `secrets/qbittorrent-password`.
@@ -59,9 +76,8 @@ as cópias aprovadas, sem apontar para os originais brutos.
 A fila permite **quatro downloads simultâneos**, até dois uploads e seis
 torrents ativos no total. A velocidade de download não tem teto configurado.
 
-Depois dos downloads atuais, o próximo passo será o
-[painel de acompanhamento e recuperação de faltantes](PROXIMOS-PASSOS.md).
-Essa melhoria ainda não foi implementada nem agendada.
+O painel já mostra informações de acompanhamento; ações manuais mais completas
+e melhorias na recuperação de faltantes continuam em [próximos passos](PROXIMOS-PASSOS.md).
 
 ## Se algo não aparecer
 

@@ -1,5 +1,16 @@
 # Painel e recuperação de episódios faltantes
 
+## Acesso futuro pelo PC na rede local
+
+O usuário pretende acessar este notebook pelo PC do apartamento, via SSH e
+pelas interfaces do laboratório. Nesta etapa, os acessos continuam restritos
+ao próprio Fedora; não foi alterado firewall nem aberta porta para a LAN.
+Antes de implementar, identificar os endereços e serviços necessários,
+definir autenticação e regras restritas ao PC/rede local, e conferir como
+proteger o painel atualmente ligado somente em `127.0.0.1`. Evitar publicar
+serviços diretamente na internet e preservar o isolamento da VM. Preparar e
+validar as alterações antes de aplicá-las.
+
 ## Atualização de 03/11/2026
 
 Foi preparado `media-stack/recover-missing.py`, executado pelo timer da VM
