@@ -19,6 +19,7 @@ Os registros de validação ficam em `../state/`.
    em **Lab - Filmes** e **Lab - Séries**. Não é preciso mover os arquivos.
 
 O passo a passo ao ligar/desligar o notebook está em [USO-DIARIO.md](../USO-DIARIO.md).
+Os comandos reutilizáveis de consulta, limpeza e desligamento estão no [guia de scripts](../GUIA-SCRIPTS.md).
 
 Os indexadores Nyaa.si e Knaben foram testados e sincronizados com os dois
 organizadores. AnimeTosho ficou de fora porque seu feed não resolveu por DNS

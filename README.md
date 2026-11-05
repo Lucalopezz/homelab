@@ -4,6 +4,7 @@ Para montar uma instalação nova após clonar, siga [REPRODUZIR.md](REPRODUZIR.
 Para publicar somente código e documentação, siga [PUBLICAR.md](PUBLICAR.md).
 O fluxo de reprodução no servidor existente está em [JELLYFIN.md](JELLYFIN.md).
 Para ligar, usar e desligar, siga [USO-DIARIO.md](USO-DIARIO.md).
+Para usar os comandos de consulta, limpeza e desligamento, veja [GUIA-SCRIPTS.md](GUIA-SCRIPTS.md).
 As instruções para uma LLM estão em [AGENTS.md](AGENTS.md); não reutilize
 autorizações antigas nem execute a criação sobre uma VM já instalada.
 

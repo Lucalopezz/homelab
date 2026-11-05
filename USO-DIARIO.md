@@ -163,6 +163,73 @@ O torrent removido deixa de compartilhar. Um erro interrompe a limpeza para
 revisão. A espera é um processo temporário: desligar o computador interrompe
 o agendamento; ele não é iniciado automaticamente após o reinício.
 
+## Conferir uma série
+
+Liste as séries e seus IDs ou consulte pelo título exato:
+
+```bash
+python3 media-stack/series-status.py --list
+python3 media-stack/series-status.py --title "Nome da série"
+```
+
+Use `--seasons 1,2` para limitar as temporadas. A consulta não altera nada;
+conta apenas episódios monitorados que já foram lançados. Para solicitar uma
+releitura do Sonarr e aguardar as importações já em andamento:
+
+```bash
+python3 media-stack/series-status.py --title "Nome da série" --rescan --wait
+```
+
+A releitura não baixa mídia e não garante que uma fonte esteja disponível. Se
+ainda houver faltas, confira o Sonarr e a recuperação descrita em
+[media-stack/README.md](media-stack/README.md). Opções e exemplos estão no
+[guia de scripts](GUIA-SCRIPTS.md).
+
+## Limpeza de cópias já publicadas
+
+A limpeza de pacotes confere os originais da VM contra o manifesto aprovado e
+as cópias presentes no catálogo do Jellyfin, verificando o conteúdo antes de
+apagar cada original. As cópias aprovadas e do Jellyfin são preservadas. O
+compartilhamento dos torrents afetados é encerrado. O painel mostra quantos
+arquivos foram removidos e quanto espaço isso liberou dentro da VM.
+
+Primeiro confira os candidatos, por exemplo uma série ou até dois torrents:
+
+```bash
+python3 media-stack/clean-published-packages.py --category sonarr --title "Nome da série" --list
+python3 media-stack/clean-published-packages.py --max-torrents 2 --list
+```
+
+Para realmente remover os originais conferidos, acrescente `--apply` aos mesmos
+filtros. O progresso fica em `state/cleanup-packages-status.json`. Se o
+computador for desligado, o processo não reinicia sozinho; para tentar retomar
+o plano interrompido, sem substituí-lo por outros filtros:
+
+```bash
+cd /mnt/dados/lab
+ionice -c 3 python3 -u media-stack/clean-published-packages.py --apply
+```
+
+A rotina interrompe ao encontrar uma divergência. O arquivo de disco virtual
+no HD do Fedora pode não diminuir automaticamente após a limpeza na VM.
+
+## Desligamento após a limpeza atual
+
+Para consultar o agendamento ou aguardar a limpeza de pacotes e desligar a VM:
+
+```bash
+python3 media-stack/shutdown-after-cleanup.py
+python3 -u media-stack/shutdown-after-cleanup.py --apply
+```
+
+Sem `--apply`, o comando apenas consulta. Com `--apply`, ele verifica downloads,
+triagem, importações e sincronização antes de pedir o desligamento gracioso da
+VM; se a limpeza já terminou e não houver trabalho pendente, pode desligar em
+seguida. O Jellyfin no Fedora permanece ligado. O estado aparece no painel e em
+`state/shutdown-after-cleanup-status.json`. Se a limpeza falhar ou for
+interrompida, a VM permanece ligada para revisão. O agendamento é temporário:
+se o Fedora for desligado antes, ele não será retomado automaticamente.
+
 ## Encerrar
 
 Para parar downloads/VM, mantendo o Jellyfin disponível para assistir ao que

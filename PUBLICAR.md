@@ -5,7 +5,7 @@ cópia da VM em funcionamento nem um backup dos seus arquivos.
 
 ## O que acompanha o repositório
 
-- `README.md`, `REPRODUZIR.md`, `PUBLICAR.md`, `JELLYFIN.md`, `USO-DIARIO.md` e `AGENTS.md`.
+- `README.md`, `REPRODUZIR.md`, `PUBLICAR.md`, `JELLYFIN.md`, `USO-DIARIO.md`, `GUIA-SCRIPTS.md` e `AGENTS.md`.
 - `scripts/`, `config/`, `media-stack/`, `jellyfin/` e `cloud-init/setup-guest.sh`,
   respeitando os arquivos gerados excluídos pelo `.gitignore`.
 - `media-stack/images.lock.json`: referências públicas das imagens utilizadas,
@@ -54,7 +54,7 @@ git init -b main
 Adicionar os caminhos explícitos evita depender de `git add .`:
 
 ```bash
-git add .gitignore AGENTS.md README.md REPRODUZIR.md PUBLICAR.md JELLYFIN.md USO-DIARIO.md
+git add .gitignore AGENTS.md README.md REPRODUZIR.md PUBLICAR.md JELLYFIN.md USO-DIARIO.md GUIA-SCRIPTS.md
 git add scripts/ config/ media-stack/ jellyfin/ cloud-init/setup-guest.sh
 python3 scripts/check-publication.py
 git diff --cached --stat
